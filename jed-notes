@@ -1,0 +1,233 @@
+
+coqtop -color no -R /home/jeremy/coq/category-theory Category
+
+Require Import Category.Monad.Kleisli.
+Require Import Category.Monad.Eilenberg.Moore.
+Require Import Category.Monad.Adjunction.
+Require Import Category.Adjunction.Hom.
+Require Import Category.Theory.Natural.Transformation.
+
+Print Category.Theory.Category.Category.
+Print Category.Theory.Isomorphism.Isomorphism.
+Print Category.Theory.Functor.Functor.
+Print Category.Theory.Natural.Transformation.Transform.
+Print Category.Theory.Adjunction.Adjunction.
+Print Category.Theory.Monad.Monad.
+Print Category.Monad.Kleisli.Kleisli.
+Print Category.Monad.Eilenberg.Moore.EilenbergMoore.
+
+Set Printing Coercions.
+Set Printing Implicit. 
+Unset Printing Coercions.
+Unset Printing Implicit. 
+
+setoids
+Build_Setoid : ∀ (A : Type) (equiv : crelation A), Equivalence equiv → Setoid A
+Build_SetoidObject : ∀ carrier : Type, Setoid carrier → SetoidObject
+Build_SetoidMorphism
+     : ∀ (x : Type) (H : Setoid x) (y : Type) (H0 : Setoid y)
+       (morphism : x → y),
+       Proper (equiv ==> equiv) morphism → SetoidMorphism H H0
+Print SetoidMorphism_Setoid.
+λ x y : SetoidObject, {|
+equiv := λ f g : SetoidMorphism x y, ∀ x0 : x, f x0 ≈ g x0;
+setoid_equiv := Sets.SetoidMorphism_Setoid_obligation_1 x y |}
+     : ∀ x y : SetoidObject, Setoid (SetoidMorphism x y)
+
+setoid_trans : ∀ (A : Type) (sa : Setoid A), Transitive equiv
+@setoid_trans : ∀ sa : Setoid ?A, @Transitive ?A (@equiv _ sa)
+
+setoid_morphism_compose = λ (x y C : SetoidObject)
+  (g : SetoidMorphism y C) (f : SetoidMorphism x y), {|
+morphism := g \o f;
+proper_morphism := Sets.setoid_morphism_compose_obligation_1 x y C g f |}
+     : ∀ x y C : SetoidObject,
+       SetoidMorphism y C → SetoidMorphism x y → SetoidMorphism x C
+
+(* note, the following arises from the command Class Category { ... } *)
+Record Category : Type := Build_Category { ...
+id : forall x : obj, hom x x;
+compose : forall x y z : obj, hom y z -> hom x y -> hom x z;
+dom := fun (x y : obj) (_ : hom x y) => x;
+cod := fun (x y : obj) (_ : hom x y) => y;
+id_left : forall (x y : obj) (f : hom x y),
+	  Setoid.equiv (compose x y y (id y) f) f;
+id_right : forall (x y : obj) (f : hom x y),
+	   Setoid.equiv (compose x x y f (id x)) f;
+comp_assoc : forall (x y z w : obj) (f : hom z w) (g : hom y z) (h : hom x y), 
+(uses Setoid.equiv), similarly comp_assoc_sym }
+
+Notation "f ≈ g" := equiv f g (in Lib/Setoid.v)
+Notation "x ↔ y" := iffT x y
+
+Notation "obj[ C ]" := (@obj C%category)
+Notation "hom[ C ]" := (@hom C%category)
+Notation "x ~> y" := (@hom _%category x%object y%object)
+Notation "x ~{ C }~> y" := (@hom C%category x%object y%object)
+Notation "x <~ y" := (@hom _%category y%object x%object)
+Notation "x <~{ C }~ y" := (@hom C%category y%object x%object)
+Notation "id[ x ]" := (@id _%category x%object)
+Notation "id{ C }" := (@id C%category _%object)
+Notation "f ∘ g" := (compose f%morphism g%morphism)
+Notation "f ∘[ C ] g" := (@compose C%category _ _ _ f%morphism g%morphism)
+Notation "f ≈[ C ] g" :=
+  (@equiv _ (@homset C%category _%object _%object) f%morphism g%morphism)
+Notation "f << A ~~> B >> g" :=
+  (@equiv (A%object ~> B%object)%homset _ f%morphism g%morphism)
+
+obj[?Category] : Type
+hom[?Category] : obj[?Category] -> obj[?Category] -> Type
+compose : ?y ~{ ?Category }~> ?z ->
+       ?x ~{ ?Category }~> ?y -> ?x ~{ ?Category }~> ?z
+
+Print Implicit compose.
+Arguments Category, x, y, z are implicit and maximally inserted
+Print Implicit id.
+Arguments Category, x are implicit and maximally inserted
+
+Theory/Category.v:Coercion obj : Category >-> Sortclass.
+
+Record Isomorphism (C : Category) (x y : obj[C]) : Type := Build_Isomorphism
+  { to : x ~{ C }~> y;
+    from : y ~{ C }~> x;
+    iso_to_from : Setoid.equiv (to ∘ from) id{C};
+    iso_from_to : Setoid.equiv (from ∘ to) id{C} }
+
+Notation "x ≅ y" := Isomorphism x y
+
+to : ?x ≅ ?y -> ?x ~{ ?C }~> ?y
+from : ?x ≅ ?y -> ?y ~{ ?C }~> ?x
+
+Theory/Isomorphism.v:Coercion to : Isomorphism >-> hom.
+Notation "f '⁻¹'" := from f
+
+Record Functor (C D : Category) : Type := Build_Functor { 
+  fobj : obj[C] -> obj[D];
+  fmap : forall x y : obj[C], x ~{ C }~> y -> fobj x ~{ D }~> fobj y;
+  fmap_id : forall x : obj[C], Setoid.equiv (fmap x x id{C}) id{D};
+  fmap_comp : forall (x y z : obj[C]) (f : y ~{ C }~> z) (g : x ~{ C }~> y),
+	      Setoid.equiv (fmap x z (f ∘ g)) (fmap y z f ∘ fmap x y g) }
+
+fobj[?Functor] : obj[?C] -> obj[?D]
+fmap[?Functor] : ?x ~{ ?C }~> ?y -> ?Functor ?x ~{ ?D }~> ?Functor ?y
+
+Notation "C ⟶ D" := Functor 
+Id[?C] : ?C ⟶ ?C
+Check @Compose : forall C D E : Category, D ⟶ E -> C ⟶ D -> C ⟶ E.
+Arguments C, D, E are implicit and maximally inserted
+Notation "F ◯ G" := Compose F G
+
+(* Functors used as functions map objects of categories 
+Coercion fobj : Functor >-> Funclass. see Theory/Functor.v *)
+
+Category.Theory.Morphisms.Epic. epic. Monic. monic.
+Retraction. Section. section. retract. 
+
+(* natural transformations *)
+Record Transform (C D : Category) (F G : C ⟶ D) : Type := Build_Transform
+  { transform : forall x : obj[C], F x ~{ D }~> G x;
+    naturality : forall (x y : obj[C]) (f : x ~{ C }~> y),
+      Setoid.equiv (fmap[G] f ∘ transform x) (transform y ∘ fmap[F] f);
+    naturality_sym ... }
+
+Notation "F ⟹ G" := Transform 
+Coq < Check Transform.  ?F ⟹ ?G : Type
+where ... ?F : [ |- ?C ⟶ ?D] ?G : [ |- ?C ⟶ ?D]
+Check @Transform : forall (C D : Category) (F G : C ⟶ D), Type.
+
+transform : forall (C D : Category) (F G : C ⟶ D),
+F ⟹ G -> forall x : obj[C], F x ~{ D }~> G x
+Arguments C, D, F, G are implicit and maximally inserted
+
+Notation "transform[ F ]" := (@transform _ _ _ _ F%transform)
+Notation "naturality[ F ]" := (@naturality _ _ _ _ F%transform)
+
+(* Transforms used as functions map objects of categories 
+Coercion transform : Transform >-> Funclass.
+see Theory/Natural/Transformation.v *)
+
+(* adjoint functors, ie adjunctions, see Adjunction/README.md,
+  https://en.wikipedia.org/wiki/Adjoint_functors *)
+Record Adjunction (C D : Category) (F : D ⟶ C) (U : C ⟶ D) : Type
+  := Build_Adjunction { ... } 
+
+Notation "F ⊣ G" := Adjunction F G
+Theory/Adjunction.v:Notation "⌊ f ⌋" := (to adj f).
+Theory/Adjunction.v:Notation "⌈ f ⌉" := (from adj f).
+Theory/Adjunction.v:Notation "adj[ A ]" := (@adj _ _ _ _ A _ _)
+
+(* more facts about adjunctions *)
+Print Category.Adjunction.Natural.Transformation.Adjunction_Transform.
+Notation "F ∹ G" := Adjunction_Transform F G
+Record Adjunction_Transform (C D : Category) (F : D ⟶ C)
+(U : C ⟶ D) : Type := Build_Adjunction_Transform
+  { unit : Id[D] ⟹ U ◯ F;
+    counit : F ◯ U ⟹ Id[C];
+    counit_fmap_unit : forall X : obj[D],
+                       Setoid.equiv (counit (F X) ∘ fmap[F] (unit X)) id{C};
+    fmap_counit_unit : forall X : obj[C],
+                       Setoid.equiv (fmap[U] (counit X) ∘ unit (U X)) id{D} }
+
+(* linking of various definitions of adjoint functors *)
+Print Module Category.Adjunction.Hom.
+
+following uses Category.Functor.Hom.Hom :  ∀ C : Category, (C ^op ∏ C) ⟶ Sets
+which uses Sets category, Category.Instance.Sets.Sets
+Notation "F ∏⟶ G" := ProductFunctor
+Notation "C ∏ D" := Product C D
+Check Category.Construction.Product.Product : Category → Category → Category.
+Print Implicit Category.Functor.Construction.Product.ProductFunctor.
+∀ C D : Category, C ⟶ D → ∀ J K : Category, J ⟶ K → (C ∏ J) ⟶ D ∏ K
+Arguments C, D, F, J, K, G are implicit and maximally inserted
+Notation "C ^op" := Opposite C (Category.Construction.Opposite.Opposite)
+"F ^op" := Opposite_Functor F (Category.Functor.Opposite.Opposite_Functor)
+
+Record Adjunction_Hom (C D : Category) (F : D ⟶ C)
+(U : C ⟶ D) : Type := Build_Adjunction_Hom
+  { hom_adj : Hom C ◯ F ^op ∏⟶ (Id[C]) ≅ Hom D ◯ (Id[D]) ^op ∏⟶ U }
+Adjunction_Hom_to_Transform : ?F ∹ ?U
+  where ...  ?H : [ |- Adjunction_Hom ?F ?U]
+Adjunction_Transform_to_Hom : ?F ∹ ?U → Adjunction_Hom ?F ?U
+Adjunction_Hom_to_Universal : ?F ⊣ ?U
+  where ... ?H : [ |- Adjunction_Hom ?F ?U]
+Adjunction_Universal_to_Hom : ?F ⊣ ?U → Adjunction_Hom ?F ?U
+
+(* monads *)
+Record Monad (C : Category) (M : C ⟶ C) : Type := Build_Monad
+  { ret : forall x : obj[C], x ~{ C }~> M x;
+    join : forall x : obj[C], M (M x) ~{ C }~> M x;
+  & 5 axioms (not including 2 that M is a functor) }
+
+Check Category.Monad.Adjunction.Adjunction_Monad.
+(* Every adjunction gives rise to a monad. *)
+Adjunction_Monad : ?F ∹ ?U -> Monad
+
+(* shows that Kleisli and EilenbergMoore "things" are categories *)
+Print Category.Monad.Kleisli.Kleisli. 
+Print Category.Monad.Eilenberg.Moore.EilenbergMoore.
+Print Module Category.Monad.Kleisli. 
+Print Module Category.Monad.Eilenberg.Moore.
+
+kleisli_compose : ?b ~{ ?C }~> ?M ?c ->
+       forall a : obj[?C], a ~{ ?C }~> ?M ?b -> a ~{ ?C }~> ?M ?c
+
+Notation "f <=< g" := (@compose Kleisli _ _ _ f g)
+Notation "f >=> g" := (@compose Kleisli _ _ _ g f)
+Notation "f >=[ M ]=> g" := (@kleisli_compose _ M _ _ _ f _ g)
+Notation "f <=[ M ]=< g" := (@kleisli_compose _ M _ _ _ g _ f)
+
+Corollary monad_id_left `(f : x ~{C}~> M y) : ret <=< f ≈ f.
+Corollary monad_id_right `(f : x ~> M y) : f <=< ret ≈ f.
+Corollary monad_comp_assoc `(f : z ~> M w) `(g : y ~> M z) `(h : x ~> M y) :
+  f <=< (g <=< h) ≈ (f <=< g) <=< h.
+
+Monad/Composition.v: 
+(* These proofs are due to Mark P. Jones and Luc Duponcheel in their article
+  "Composing monads", Research Report YALEU/DCS/RR-1004, December 1993. ... *)
+
+Check Hom C ◯ F ^op ∏⟶ (Id[C]).
+Check Hom D ◯ (Id[D]) ^op ∏⟶ U.
+Check Hom C ◯ (F ^op ∏⟶ (Id[C])).
+Check Hom D ◯ ((Id[D]) ^op ∏⟶ U).
+Check (F ^op ∏⟶ (Id[C])).
+Check ((Id[D]) ^op ∏⟶ U).
