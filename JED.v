@@ -283,7 +283,10 @@ Definition apD W f (x : W) (X : ap Type W f x) := X : f x.
 *)
 
 (* note here how only two of the four conditions in the
-  definition of Adjunction are used *)
+  definition of Adjunction are used, this is because
+  to_adj_nat_l and from_adj_nat_l say the same thing, likewise
+  to_adj_nat_r and from_adj_nat_r (given that adj is an isormorphism)
+  *)
 Program Definition Adjunction_Universal_to_IffEq (A : F ⊣ U)
   : Adjunction_IffEq := {|
     unit' := fun x => to adj id ;

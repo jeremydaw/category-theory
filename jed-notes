@@ -34,8 +34,14 @@ equiv := λ f g : SetoidMorphism x y, ∀ x0 : x, f x0 ≈ g x0;
 setoid_equiv := Sets.SetoidMorphism_Setoid_obligation_1 x y |}
      : ∀ x y : SetoidObject, Setoid (SetoidMorphism x y)
 
+equiv : ∀ A : Type, Setoid A → crelation A
+Arguments A, Setoid are implicit and maximally inserted
+
 setoid_trans : ∀ (A : Type) (sa : Setoid A), Transitive equiv
 @setoid_trans : ∀ sa : Setoid ?A, @Transitive ?A (@equiv _ sa)
+@setoid_sym ?A : ∀ sa : Setoid ?A, @Symmetric ?A (@equiv _ sa)
+@setoid_refl ?A : ∀ sa : Setoid ?A, @Reflexive ?A (@equiv _ sa)
+@setoid_equiv _ False_Setoid : @Equivalence False (@equiv _ False_Setoid)
 
 setoid_morphism_compose = λ (x y C : SetoidObject)
   (g : SetoidMorphism y C) (f : SetoidMorphism x y), {|
