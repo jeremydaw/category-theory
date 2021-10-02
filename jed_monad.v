@@ -11,6 +11,7 @@ Require Import Category.Theory.Functor.
 Require Import Category.Theory.Monad.
 Require Import Category.Theory.Adjunction.
 Require Import Category.Monad.Kleisli.
+Require Import JED.
 
 Generalizable All Variables.
 Set Primitive Projections.
@@ -199,15 +200,9 @@ Set Printing Implicit.
 Unset Printing Coercions.
 Unset Printing Implicit.
 *)
-Print Implicit id.
-Print Implicit ret3.
-Print Implicit obj.
-Print Implicit ext.
-Print Implicit hom.
-Print Implicit homset.
-Print Implicit uhom.
-Print Implicit ext_respects.
-Print Implicit compose.
+Print Implicit m_id_l.
+Print Implicit Functor.
+Print Functor.
 Print Implicit compose_respects.
 Print Category.
 (* NB in the following, if we leave the homset as an obligation to be solved,
@@ -215,7 +210,7 @@ Print Category.
   or by exact (@homset C X (M Y)). but in either case we subsequently
   get the problem that it can't unify (@homset C x (M z)) with
   (Kleisli_from_3_obligation_1 C M H x z) *)
-Program Definition Kleisli_from_3 C M (H : @Monad3 C M) : Category := 
+Program Definition Kleisli_from_3 {C M} (H : @Monad3 C M) : Category := 
   {| obj := @obj C ; hom := fun x y => @hom C x (M y) ;
     homset := fun x y => @homset C x (M y) ;
     id := fun x => ret3 H ;
@@ -233,8 +228,77 @@ Check Kleisli_from_3_obligation_2.
 Check Kleisli_from_3_obligation_3.
 Check Kleisli_from_3_obligation_4.
 
-Print Kleisli_from_3_obligation_1.
-Print Kleisli_from_3_obligation_2.
-Print Kleisli_from_3_obligation_3.
-Print Kleisli_from_3_obligation_4.
+Check Kleisli_from_3.
+Print Implicit Kleisli_from_3.
+
+(* functors from and to Kleisli category of monad *)
+Program Definition ext_functor {C M} (H : @Monad3 C M) :
+  @Functor (Kleisli_from_3 H) C  :=
+  {| fobj := M ; fmap := fun x y (f : x ~{ C }~> M y) => ext H f |}.
+Next Obligation. proper. apply ext_respects. apply X. Qed.
+Next Obligation. apply m_id_l. Qed.
+Next Obligation. apply setoid_sym. apply m_assoc. Qed.
+
+Program Definition ret_o_functor {C M} (H : @Monad3 C M) :
+  @Functor C (Kleisli_from_3 H)  :=
+  {| fobj := fun x => x ; fmap := fun x y (f : x ~{ C }~> y) => ret3 H ∘ f |}.
+Next Obligation. rewrite !comp_assoc.
+  apply comp_o_r. symmetry. apply m_id_r. Qed.
+
+Check ret_o_functor.
+Check ret_o_functor_obligation_1.
+Check ret_o_functor_obligation_2.
+Check ret_o_functor_obligation_3.
+
+Print Implicit id.
+Print Implicit ret3.
+Print Implicit obj.
+Print Implicit ext.
+Print Implicit hom.
+Print Implicit homset.
+Print Implicit uhom.
+Print Implicit ext_respects.
+Print Implicit Adjunction_IffEq.
+Print Adjunction_IffEq.
+
+(* adjoint functors to and from Kleisli category of monad *)
+Program Definition k_adj {C M} (H : @Monad3 C M) :
+  @Adjunction_IffEq (Kleisli_from_3 H) C (ret_o_functor H) (ext_functor H) := 
+  {| unit' := fun x => ret3 H ;
+    counit' := fun y => @id C (M y) |}.
+Next Obligation. rewrite !comp_assoc.
+rewrite !m_id_r. rewrite id_left.
+split ; apply setoid_sym. Qed.
+
+Check k_adj.  Check k_adj_obligation_1.
+
+(*
+(* 
+Program Definition k_adj {C M} (H : @Monad3 C M) :
+  Adjunction_IffEq (ext_functor H) (ret_o_functor H) :=
+  {| unit' := fun x => ret3 H ; counit' := fun y => id[M y] |}.
+Next Obligation. rewrite !comp_assoc.
+*)
+
+
+(* which of these is right ? *)
+Lemma k_adj {C M} (H : @Monad3 C M) :
+  @Adjunction_IffEq (Kleisli_from_3' H) C (ret_o_functor H) (ext_functor H). 
+Proof.
+
+eapply Build_Adjunction_IffEq.
+intros.  simpl.
+
+split ; intro.
+
+(* wrong 
+Lemma k_adj {C M} (H : @Monad3 C M) :
+  Adjunction_IffEq (ext_functor H) (ret_o_functor H).
+eapply Build_Adjunction_IffEq.
+intros. split ; intro.
+pose compose_respects.
+pose ext_respects.
+rewrite <- X.
+*)
+*)
 
