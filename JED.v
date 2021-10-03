@@ -50,23 +50,25 @@ Section CDFU.
 
 Context {C : Category}.
 Context {D : Category}.
-Context {F : D ⟶ C}.
-Context {U : C ⟶ D}.
+Context (F : D ⟶ C).
+Context (U : C ⟶ D).
 
 Class Adjunction_OW := {
   unitOW : Id[D] ⟹ U ◯ F ;
   (* there exists an adjoint function, from adj of Adjunction *)
-  adjr : forall x y (g : x ~> U y), F x ~> y ;
+  adjr : forall {x y} (g : x ~{ D }~> U y), F x ~{ C }~> y ;
   (* the adjoint arrow is the unique one which makes the diagram commute *)
-  adjruc : forall x y (f : F x ~> y) (g : x ~> U y),
-    iffT (fmap[U] f ∘ unitOW x ≈ g) (adjr x y g ≈ f)
+  adjruc : forall {x y} (f : F x ~{ C }~> y) (g : x ~{ D }~> U y),
+    iffT (fmap[U] f ∘ unitOW x ≈ g) (adjr g ≈ f)
   }.
 
+Print Implicit adjr.
+
 Class Adjunction_IffEq := {
-  unit' : forall x : obj[D], x ~{ D }~> U (F x) ;
-  counit' : forall y : obj[C], F (U y) ~{ C }~> y ;
-  iffeq : forall x y (f : F x ~> y) (g : x ~> U y),
-    iffT (fmap[U] f ∘ unit' x ≈ g) (counit' y ∘ fmap[F] g ≈ f)
+  unit' : forall {x : obj[D]}, x ~{ D }~> U (F x) ;
+  counit' : forall {y : obj[C]}, F (U y) ~{ C }~> y ;
+  iffeq : forall {x y} (f : F x ~{ C }~> y) (g : x ~{ D }~> U y),
+    iffT (fmap[U] f ∘ unit' ≈ g) (counit' ∘ fmap[F] g ≈ f)
   }.
 
 Section AdjunctionIffEq.
@@ -76,7 +78,7 @@ Program Definition iff_unit : Id ⟹ U ◯ F := {| transform := @unit' H |}.
 Next Obligation.  apply (@iffeq H).
 (* note: destruct H. regards the unit' of H as different, must use @iffeq H *)
 rewrite fmap_comp, comp_assoc.
-pose (@iffeq H y _ id (unit' _)). 
+pose (@iffeq H y _ id unit'). 
 pose (fst i).  require e.
 rewrite fmap_id, id_left.  reflexivity.
 rewrite e, id_left. reflexivity. Qed.
@@ -85,7 +87,7 @@ Next Obligation.  symmetry.  apply iff_unit_obligation_1. Qed.
 Program Definition iff_counit : F ◯ U ⟹  Id := {| transform := @counit' H |}.
 Next Obligation.  symmetry.  apply (@iffeq H).
 rewrite fmap_comp, <- comp_assoc.
-pose (@iffeq H _ x (counit' _) id). 
+pose (@iffeq H _ x counit' id). 
 pose (snd i).  require e.
 rewrite fmap_id, id_right.  reflexivity.
 rewrite e, id_right. reflexivity. Qed.
@@ -134,8 +136,8 @@ Print Adjunction.
 Print Adjunction_IffEq.
 
 Program Definition iff_adj x y : F x ~{ C }~> y ≊ x ~{ D }~> U y :=
-  {| to := {| morphism := fun f => fmap[U] f ∘ unit' x |} ;
-   from := {| morphism := fun g => counit' y ∘ fmap[F] g |} |}.
+  {| to := {| morphism := fun f => fmap[U] f ∘ unit' |} ;
+   from := {| morphism := fun g => counit' ∘ fmap[F] g |} |}.
 Next Obligation.
 unfold Proper. unfold respectful.  intros. rewrite X. reflexivity. Qed.
 Next Obligation.
@@ -143,6 +145,7 @@ unfold Proper. unfold respectful.  intros. rewrite X. reflexivity. Qed.
 Next Obligation.  apply (@iffeq H). reflexivity. Qed.
 Next Obligation.  apply (@iffeq H). reflexivity. Qed.
 
+Print Implicit iffeq.
 Print Implicit iff_adj.
 Print Implicit naturality.
 
@@ -319,13 +322,12 @@ Arguments Adjunction_IffEq_to_Transform {C D} F%functor U%functor.
 (*
 *)
 
+Print Implicit Adjunction_IffEq_to_Transform.
 Print Implicit Adjunction_Transform_to_IffEq.
-Print Implicit Adjunction_IffEq.
 Print Implicit Adjunction_Transform.
 Print Implicit Adjunction_IffEq.
 Print Implicit unit'.
 Print Implicit iff_unit.
-Print Implicit Adjunction_IffEq_to_Transform.
 Print Implicit iffeq.
 Print Implicit naturality_sym.
 Print Implicit id.
@@ -384,9 +386,111 @@ which should be coercible to
   see notes in that proof for details *)
 
 (* TO DO next:
-use the fact that only two of the four conditions in Adjunction are needed;
 implement what Wikipedia calls Definition via universal morphisms,
 noting that it does not require that G be a functor or epsilon a nt
 (they follow);
 look at the definition by Hom
 *)
+(* characterization of adjoint functors, similar to Adjunction_OW,
+  but without requiring that F be a functor or that unit is a nt,
+  (we _define_ action of F on arrows), 
+  see Robin Cockett notes, draft April 2008, s2.2.1 *)
+
+(*
+Context {C : Category}.
+Context {D : Category}.
+Context {F : D ⟶ C}.
+Context {U : C ⟶ D}.
+*)
+
+Print Implicit Adjunction_Transform.
+Print Implicit Adjunction_IffEq.
+Print Implicit Adjunction_OW.
+Print Implicit Adjunction.
+Print Adjunction_Transform.
+Print Adjunction_IffEq.
+Print Adjunction_OW.
+Print Adjunction.
+Print Implicit Functor.
+Print Functor.
+
+Class Adjunction_OWnf {C D} (U : C ⟶ D) (Fo : obj[D] -> obj[C]) := {
+  unitOWnf : forall {x : obj[D]}, (x ~{ D }~> U (Fo x)) ;
+  adjrnf : forall {x y} (g : x ~{ D }~> U y), Fo x ~{ C }~> y ;
+  adjrnf_respects : ∀ {x y}, Proper (equiv ==> equiv) (@adjrnf x y) ;
+  (* the adjoint arrow is the unique one which makes the diagram commute *)
+  adjrucnf : forall {x y} (f : Fo x ~{ C }~> y) (g : x ~{ D }~> U y),
+    iffT (fmap[U] f ∘ unitOWnf ≈ g) (adjrnf g ≈ f)
+  }.
+
+(*
+Print Implicit Adjunction_OWnf.
+Print Implicit adjrucnf.
+Print Implicit adjrnf.
+*)
+Print Adjunction_OWnf.
+
+Program Definition Adjunction_nf_to_fun {C D} U Fo (H : Adjunction_OWnf U Fo) :
+  @Functor D C := {| fobj := Fo ;
+    fmap := fun x y h => adjrnf (unitOWnf ∘ h) |}.
+Next Obligation. proper. apply adjrnf_respects.
+  apply compose_respects. apply setoid_refl. apply X. Qed.
+Next Obligation. apply adjrucnf.  rewrite fmap_id.
+  rewrite id_right. apply id_left. Qed.
+Next Obligation. apply adjrucnf.  rewrite fmap_comp.
+pose (fun x y (g : x ~> U y) => snd (adjrucnf _ g) (setoid_refl _ _)) as rfu.
+rewrite <- comp_assoc.  rewrite rfu.  rewrite comp_assoc.  rewrite rfu.
+apply setoid_sym.  apply comp_assoc. Qed.
+
+Print Implicit unitOWnf.
+Print Implicit Transform.
+Print Implicit Adjunction_nf_to_fun.
+Check Adjunction_nf_to_fun.
+Check Adjunction_nf_to_fun_obligation_1.
+Check Adjunction_nf_to_fun_obligation_2.
+Check Adjunction_nf_to_fun_obligation_3.
+
+Program Definition Adjunction_nf_to_nt {C D} U Fo 
+  (H : @Adjunction_OWnf C D U Fo) :
+  Id[D] ⟹ U ◯ (Adjunction_nf_to_fun U Fo H) := 
+  {| transform := @unitOWnf _ _ _ _ H |}.
+Next Obligation. apply adjrucnf. reflexivity. Qed.
+Next Obligation. symmetry. apply adjrucnf. reflexivity. Qed.
+
+Check Adjunction_nf_to_nt.
+Print Implicit Adjunction_nf_to_nt.
+Print Implicit Adjunction_OWnf.
+
+Program Definition Adjunction_nf_to_OW {C D} U Fo 
+  (H : @Adjunction_OWnf C D U Fo) :
+  Adjunction_OW (Adjunction_nf_to_fun U Fo H) U := 
+  {| unitOW := Adjunction_nf_to_nt U Fo H ;
+    adjr := fun x y => adjrnf ;
+    adjruc := fun x y => adjrucnf |}.
+
+Print Implicit Adjunction_nf_to_OW.
+Check Adjunction_nf_to_OW.
+Print Adjunction_OW.
+Print Implicit Adjunction_OWnf.
+Print Adjunction_OWnf.
+Print Implicit adjruc.
+
+(* the converse to this should be quite trivial *)
+Program Definition Adjunction_OW_to_nf {C D} F U 
+  (H : @Adjunction_OW C D F U) :
+  Adjunction_OWnf U (@fobj _ _ F) := 
+  {| unitOWnf := transform (@unitOW _ _ _ _ H) ;
+    adjrnf := @adjr _ _ F U H ;
+    adjrucnf := @adjruc _ _ F U H |}.
+Next Obligation. proper.
+(* interesting proof of Proper (equiv ==> equiv) (adjr _ _) *)
+apply adjruc. rewrite X. apply adjruc. reflexivity. Qed.
+
+(*
+So can we drop the assumption in Adjunction_OW that unit is a nt,
+and prove it as in Adjunction_OWnf, by showing that fmap[F]
+is as defined in Adjunction_nf_to_fun?
+Unlikely as Class Adjunction_OW says nothing about fmap[F]
+except that unitOW is a nt
+*)
+
