@@ -273,11 +273,6 @@ split ; apply setoid_sym. Qed.
 Check k_adj.  Check k_adj_obligation_1.
 
 Print Implicit Compose. (* composition of functors, "F ◯ G" := Compose F G *)
-Print Implicit Monad3.
-Print Implicit unitOW.
-Print Monad3.
-Print Adjunction_OW.
-Print Implicit adjr.
 Print Implicit adjruc.
 Print Implicit adjrucnf.
 
@@ -329,10 +324,38 @@ apply comp_o_l. apply iffeq. reflexivity. Qed.
 
 Check Adjunction_OW_to_Monad3.  Check Adjunction_IffEq_to_Monad3.
 
+(* compound monad, monad in Kleisli category of another monad *)
+(* this is the basis of the prod construction of Jones & Duponcheel *)
+
+Program Definition JD_Prod {C M} (H : @Monad3 C M) {N} 
+  (J : @Monad3 (@Kleisli_from_3 C M H) N) : @Monad3 C (Basics.compose M N) :=
+  {| ret3 := @ret3 _ _ J ; ext := fun x y f => ext H (ext J f) |}.
+
+Next Obligation.  proper. apply ext_respects.
+apply (ext_respects J). apply X. Qed.
+
+Next Obligation.  (* rewrite (m_id_r J). or rewrite m_id_r. fail here *)
+exact (m_id_r J _ _ f). Qed.
+
+Next Obligation. pose (ext_respects H). (* needed, including the H *)
+rewrite m_id_l. apply m_id_l. Qed.
+
+Next Obligation. rewrite m_assoc. apply ext_respects.
+(* apply setoid_trans. fails, why?? and rewrite (m_assoc J). fails *)
+apply (m_assoc J _ _ _ g f). Qed.
+
+Check JD_Prod.
+
+Print Implicit ext_respects.
+Print Implicit Kleisli_from_3.
+Print Implicit Monad3.
+Print Implicit ret3.
+Print Implicit m_assoc.
+Print Monad3.
+
 (* 
 Set Printing Coercions.
 Set Printing Implicit.
 Unset Printing Coercions.
 Unset Printing Implicit.
 *)
-
