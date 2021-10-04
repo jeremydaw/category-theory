@@ -438,6 +438,7 @@ Next Obligation. proper. apply adjrnf_respects.
 Next Obligation. apply adjrucnf.  rewrite fmap_id.
   rewrite id_right. apply id_left. Qed.
 Next Obligation. apply adjrucnf.  rewrite fmap_comp.
+(* a more complex consequence of iff of equivs - maybe a lemma? *)
 pose (fun x y (g : x ~> U y) => snd (adjrucnf _ g) (setoid_refl _ _)) as rfu.
 rewrite <- comp_assoc.  rewrite rfu.  rewrite comp_assoc.  rewrite rfu.
 apply setoid_sym.  apply comp_assoc. Qed.
@@ -483,7 +484,8 @@ Program Definition Adjunction_OW_to_nf {C D} F U
     adjrnf := @adjr _ _ F U H ;
     adjrucnf := @adjruc _ _ F U H |}.
 Next Obligation. proper.
-(* interesting proof of Proper (equiv ==> equiv) (adjr _ _) *)
+(* interesting proof of Proper (equiv ==> equiv) (adjr _ _) 
+  maybe make this a lemma ? *)
 apply adjruc. rewrite X. apply adjruc. reflexivity. Qed.
 
 (*

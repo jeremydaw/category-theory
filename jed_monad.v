@@ -272,33 +272,67 @@ split ; apply setoid_sym. Qed.
 
 Check k_adj.  Check k_adj_obligation_1.
 
-(*
+Print Implicit Compose. (* composition of functors, "F ◯ G" := Compose F G *)
+Print Implicit Monad3.
+Print Implicit unitOW.
+Print Monad3.
+Print Adjunction_OW.
+Print Implicit adjr.
+Print Implicit adjruc.
+Print Implicit adjrucnf.
+
+(* Every adjunction gives rise to a monad. *)
+Require Category.Monad.Adjunction.
+Check Category.Monad.Adjunction.Adjunction_Monad.
+
+Program Definition Adjunction_OW_to_Monad3 {C D} F U
+  (H : @Adjunction_OW C D F U) : @Monad3 D (fobj[Compose U F]) :=
+  {| ret3 := transform (unitOW F U) ;
+     ext := fun x z h => fmap[U] (adjr F U h : F x ~{ C }~> F z) |}.
+Next Obligation. proper. apply fmap_respects.
+apply adjruc. rewrite X. apply adjruc. reflexivity. Qed.
+Next Obligation.  Check adjr.  Check adjruc.  Check adjruc. (* types OK *)
+apply adjruc. reflexivity. Qed.
+
+Next Obligation. (* Coq misbehaves here *)
+Check adjr.  Check unitOW.  Check adjruc. (* give ∀ (F U : D ⟶ D) ... *)
+(* goal is fmap[U] (adjr _ _ (unitOW _ _ x)) ≈ id{D}
+  so wanted to assert (adjr _ _ (unitOW _ _ x) ≈ id{C}) but fails *)
+(* assert (adjr _ _ (@unitOW C D F U H x) ≈ id{C}). this also fails *)
+(* this works, but we use alternative approach below 
+assert (@adjr C D F U H x (F x) (unitOW _ _ x) ≈ id{C}).
+{ apply adjruc.  rewrite fmap_id. apply id_left. }
+rewrite X.  apply fmap_id. *)
+eapply setoid_trans. 2: apply fmap_id.
+apply fmap_respects.  apply adjruc.  rewrite fmap_id. apply id_left. Qed.
+ 
+Next Obligation.
+Check adjr.  Check unitOW.  Check adjruc. (* give ∀ (F U : D ⟶ D) ... *)
+rewrite <- fmap_comp. apply fmap_respects. 
+symmetry. apply adjruc.
+rewrite fmap_comp.  rewrite <- comp_assoc.
+apply comp_o_l. apply adjruc. reflexivity. Qed.
+
+(* this proof very similar to Adjunction_OW_to_Monad3 *)
+Program Definition Adjunction_IffEq_to_Monad3 {C D} F U
+  (H : @Adjunction_IffEq C D F U) : @Monad3 D (fobj[Compose U F]) :=
+  {| ret3 := fun x => unit' F U ;
+    ext := fun x z h => fmap[U] ((counit' _ _ ∘ fmap[F] h)) |}.
+Next Obligation. proper. apply fmap_respects. rewrite X. reflexivity. Qed.
+Next Obligation. apply iffeq.  reflexivity. Qed.
+Next Obligation.  eapply setoid_trans. 2: apply fmap_id.
+apply fmap_respects. apply iffeq. rewrite fmap_id. apply id_left. Qed.
+Next Obligation.  rewrite <- fmap_comp. apply fmap_respects. 
+symmetry. apply iffeq.
+rewrite fmap_comp.  rewrite <- comp_assoc.
+apply comp_o_l. apply iffeq. reflexivity. Qed.
+
+Check Adjunction_OW_to_Monad3.  Check Adjunction_IffEq_to_Monad3.
+
 (* 
-Program Definition k_adj {C M} (H : @Monad3 C M) :
-  Adjunction_IffEq (ext_functor H) (ret_o_functor H) :=
-  {| unit' := fun x => ret3 H ; counit' := fun y => id[M y] |}.
-Next Obligation. rewrite !comp_assoc.
-*)
-
-
-(* which of these is right ? *)
-Lemma k_adj {C M} (H : @Monad3 C M) :
-  @Adjunction_IffEq (Kleisli_from_3' H) C (ret_o_functor H) (ext_functor H). 
-Proof.
-
-eapply Build_Adjunction_IffEq.
-intros.  simpl.
-
-split ; intro.
-
-(* wrong 
-Lemma k_adj {C M} (H : @Monad3 C M) :
-  Adjunction_IffEq (ext_functor H) (ret_o_functor H).
-eapply Build_Adjunction_IffEq.
-intros. split ; intro.
-pose compose_respects.
-pose ext_respects.
-rewrite <- X.
-*)
+Set Printing Coercions.
+Set Printing Implicit.
+Unset Printing Coercions.
+Unset Printing Implicit.
 *)
 
