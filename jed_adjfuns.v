@@ -1,6 +1,6 @@
 
 (*
-coqc -R /home/jeremy/coq/category-theory Category JED.v
+coqc -R /home/jeremy/coq/category-theory Category jed_adjfuns.v
 coqtop -R /home/jeremy/coq/category-theory Category 
 *)
 
@@ -385,12 +385,6 @@ which should be coercible to
   pose (proper_morphism (f : SetoidMorphism ...)) to make rewriting work,
   see notes in that proof for details *)
 
-(* TO DO next:
-implement what Wikipedia calls Definition via universal morphisms,
-noting that it does not require that G be a functor or epsilon a nt
-(they follow);
-look at the definition by Hom
-*)
 (* characterization of adjoint functors, similar to Adjunction_OW,
   but without requiring that F be a functor or that unit is a nt,
   (we _define_ action of F on arrows), 

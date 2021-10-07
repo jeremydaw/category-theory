@@ -50,6 +50,16 @@ proper_morphism := Sets.setoid_morphism_compose_obligation_1 x y C g f |}
      : ∀ x y C : SetoidObject,
        SetoidMorphism y C → SetoidMorphism x y → SetoidMorphism x C
 
+Proper {A} (R : crelation A) (m : A) = R m m
+     : ∀ A : Type, crelation A → A → Type
+
+respectful {A B} (R : crelation A) (R' : crelation B) 
+(f g : A → B) = ∀ x y : A, R x y → R' (f x) (g y)
+     : ∀ A B : Type, crelation A → crelation B → crelation (A → B)
+
+nat_Setoid : Setoid (F ⟹ F)
+Functor_Setoid : Setoid (D ⟶ D)
+
 (* note, the following arises from the command Class Category { ... } *)
 Record Category : Type := Build_Category { ...
 id : forall x : obj, hom x x;
@@ -116,12 +126,15 @@ Record Functor (C D : Category) : Type := Build_Functor {
 
 fobj[?Functor] : obj[?C] -> obj[?D]
 fmap[?Functor] : ?x ~{ ?C }~> ?y -> ?Functor ?x ~{ ?D }~> ?Functor ?y
+Check fobj_respects.
+Check fmap_respects.
 
 Notation "C ⟶ D" := Functor 
 Id[?C] : ?C ⟶ ?C
 Check @Compose : forall C D E : Category, D ⟶ E -> C ⟶ D -> C ⟶ E.
 Arguments C, D, E are implicit and maximally inserted
 Notation "F ◯ G" := Compose F G
+Check Compose_respects.
 
 (* Functors used as functions map objects of categories 
 Coercion fobj : Functor >-> Funclass. see Theory/Functor.v *)
@@ -152,15 +165,25 @@ Notation "naturality[ F ]" := (@naturality _ _ _ _ F%transform)
 Coercion transform : Transform >-> Funclass.
 see Theory/Natural/Transformation.v *)
 
+Check Transform_reflexive.
+Check Transform_transitive.
+Check Transform_respects.
+Check nat_compose.
+Check nat_compose_respects.
+Notation "F ∙ G" := (@nat_compose _ _ _ _ _ F G)
+
 (* adjoint functors, ie adjunctions, see Adjunction/README.md,
   https://en.wikipedia.org/wiki/Adjoint_functors *)
 Record Adjunction (C D : Category) (F : D ⟶ C) (U : C ⟶ D) : Type
-  := Build_Adjunction { ... } 
+  := Build_Adjunction
+  { adj : ∀ (x : obj[D]) (y : obj[C]), F x ~{ C }~> y ≊ x ~{ D }~> U y; ... } 
 
 Notation "F ⊣ G" := Adjunction F G
 Theory/Adjunction.v:Notation "⌊ f ⌋" := (to adj f).
 Theory/Adjunction.v:Notation "⌈ f ⌉" := (from adj f).
 Theory/Adjunction.v:Notation "adj[ A ]" := (@adj _ _ _ _ A _ _)
+
+to_adj_respects : ∀ f g : ?F ?x ~{ ?C }~> ?y, f ≈ g → adj[?H] f ≈ adj[?H] g
 
 (* more facts about adjunctions *)
 Print Category.Adjunction.Natural.Transformation.Adjunction_Transform.

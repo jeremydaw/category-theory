@@ -323,11 +323,55 @@ rewrite fmap_comp.  rewrite <- comp_assoc.
 apply comp_o_l. apply iffeq. reflexivity. Qed.
 
 Check Adjunction_OW_to_Monad3.  Check Adjunction_IffEq_to_Monad3.
+Check Adjunction_IffEq_to_Monad3_obligation_2.
+Check Adjunction_IffEq_to_Monad3_obligation_3.
+Check Adjunction_IffEq_to_Monad3_obligation_4.
+
+(* functor to/from Kleisli cat of adjunction, see Barr & Wells 
+Toposes, Triples and Theories ch 3, s2.3 
+"In fact, [the Kleisli category] is initial and [The Eilenberg-Moore category]
+is ﬁnal among all ways of factoring [a monad] as an adjoint pair." *)
+
+Program Definition Adjunction_IffEq_to_rel_fun {C D} F U 
+  (H : @Adjunction_IffEq C D F U) :
+  @Functor (Kleisli_from_3 (Adjunction_IffEq_to_Monad3 F U H)) C :=
+  {| fobj := fobj[F] ;
+    fmap := fun x z (g : x ~{ D }~> U (F z)) => counit' F U ∘ fmap[F] g |}.
+Next Obligation. proper. rewrite X. reflexivity. Qed.
+Next Obligation. apply iffeq. rewrite fmap_id. apply id_left. Qed.
+Next Obligation. apply iffeq. rewrite fmap_comp. rewrite <- comp_assoc.
+  apply comp_o_l. apply iffeq. reflexivity. Qed.
+
+Lemma AIE_rf_comp_F {C D} F U (H : @Adjunction_IffEq C D F U) :
+  Compose (Adjunction_IffEq_to_rel_fun F U H)  
+  (ret_o_functor (Adjunction_IffEq_to_Monad3 F U H)) ≈ F.
+Proof. simpl.  exists (fun x => (@iso_id _ (F x))). simpl.
+intros. apply iffeq.  rewrite id_left.  rewrite id_right.
+apply (@naturality _ _ _ _ (iff_unit F U)). Qed.
+
+Lemma AIE_rf_comp_U {C D} F U (H : @Adjunction_IffEq C D F U) :
+  Compose U (Adjunction_IffEq_to_rel_fun F U H) ≈ 
+    (ext_functor (Adjunction_IffEq_to_Monad3 F U H)).
+Proof. simpl.  exists (fun x => (@iso_id _ (U (F x)))). simpl.
+intros.  rewrite id_left.  rewrite id_right. reflexivity. Qed.
+
+Print Implicit naturality.
+Print Implicit Kleisli_from_3.
+Print Implicit ret_o_functor.
+Print Implicit counit'.
+Print Implicit iffeq.
+Print Implicit fobj.
+Print Implicit iso_id.
+Print Functor.
+Print Implicit Functor.
+Print Adjunction_IffEq.
+Print Implicit Kleisli_from_3.  
+Print Implicit Adjunction_IffEq_to_Monad3.  
 
 (* compound monad, monad in Kleisli category of another monad *)
 (* this is the basis of the prod construction of Jones & Duponcheel *)
 
-Program Definition JD_Prod {C M} (H : @Monad3 C M) {N} 
+Program Definition JD_Pext {C M} (H : @Monad3 C M) {N} 
   (J : @Monad3 (@Kleisli_from_3 C M H) N) : @Monad3 C (Basics.compose M N) :=
   {| ret3 := @ret3 _ _ J ; ext := fun x y f => ext H (ext J f) |}.
 
@@ -344,7 +388,7 @@ Next Obligation. rewrite m_assoc. apply ext_respects.
 (* apply setoid_trans. fails, why?? and rewrite (m_assoc J). fails *)
 apply (m_assoc J _ _ _ g f). Qed.
 
-Check JD_Prod.
+Check JD_Pext.
 
 Print Implicit ext_respects.
 Print Implicit Kleisli_from_3.
