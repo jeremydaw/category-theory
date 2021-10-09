@@ -72,7 +72,7 @@ Class Adjunction_IffEq := {
   }.
 
 Section AdjunctionIffEq.
-Context `{Adjunction_IffEq}.
+Context `(Adjunction_IffEq).
 
 Program Definition iff_unit : Id ⟹ U ◯ F := {| transform := @unit' H |}.
 Next Obligation.  apply (@iffeq H).
@@ -119,7 +119,8 @@ rewrite iffeq. reflexivity. Qed.
 Next Obligation.  rewrite fmap_id, id_left, id_right.
 rewrite <- iffeq. reflexivity. Qed.
 
-(* Lemma or Program Definition - seems to make no difference *)
+(* Lemma or Program Definition - seems to make no difference,
+  except when Print-ing it, to see the partial "program" *)
 Lemma Adjunction_IffEq_to_OW : Adjunction_OW.
 Proof.  exact (Build_Adjunction_OW iff_unit _ (@iffeq H)). Qed.
 
@@ -314,21 +315,39 @@ Print Implicit adj.
 Print Implicit to_adj_nat_l.
 *)
 
+(*
+*)
 End CDFU.
 
 Arguments Adjunction_IffEq {C D} F%functor U%functor.
-Arguments Adjunction_IffEq_to_Universal {C D} F%functor U%functor.
-Arguments Adjunction_IffEq_to_Transform {C D} F%functor U%functor.
+Arguments Adjunction_IffEq_to_Universal {C D F%functor U%functor}.
+Arguments Adjunction_IffEq_to_Transform {C D F%functor U%functor}.
+Arguments Adjunction_Transform_to_IffEq {C D F%functor U%functor}.
+Arguments Adjunction_Universal_to_IffEq {C D F%functor U%functor}.
+Arguments Adjunction_IffEq_to_OW {C D F%functor U%functor}.
+Arguments Adjunction_OW_to_IffEq {C D F%functor U%functor}.
+Arguments iff_unit {C D F%functor U%functor}.
+Arguments iff_counit {C D F%functor U%functor}.
+Arguments unit' {C D F%functor U%functor}.
+Arguments counit' {C D F%functor U%functor}.
+Arguments iffeq {C D F%functor U%functor}.
+Arguments adjruc {C D F%functor U%functor}.
 (*
 *)
 
 Print Implicit Adjunction_IffEq_to_Transform.
 Print Implicit Adjunction_Transform_to_IffEq.
+Print Implicit Adjunction_Universal_to_IffEq.
+Print Implicit Adjunction.
+Print Implicit Adjunction_OW.
+Print Implicit Adjunction_OW_to_IffEq.
+Print Implicit Adjunction_IffEq_to_OW.
 Print Implicit Adjunction_Transform.
 Print Implicit Adjunction_IffEq.
 Print Implicit unit'.
 Print Implicit iff_unit.
 Print Implicit iffeq.
+Print Implicit adjruc.
 Print Implicit naturality_sym.
 Print Implicit id.
 Print Category.Adjunction.Natural.Transformation.Adjunction_Transform.
@@ -490,3 +509,32 @@ Unlikely as Class Adjunction_OW says nothing about fmap[F]
 except that unitOW is a nt
 *)
 
+Print Adjunction_IffEq.
+Print Implicit Adjunction_IffEq.
+Print Implicit Build_Adjunction_IffEq.
+Print Adjunction_OWnf.
+Print Implicit unit'.
+Print Implicit Compose.
+(* composition of adjunctions *)
+Program Definition Adjunction_IffEq_comp {C D E F F' U U'} 
+  (H : @Adjunction_IffEq C D F U) (H' : @Adjunction_IffEq D E F' U') :
+  @Adjunction_IffEq C E (F ◯ F') (U' ◯ U) :=
+  {| unit' := fun x => fmap[U'] (unit' H (F' x)) ∘ (unit' H' x) ;
+  counit' := fun y => (counit' H y) ∘ fmap[F] (counit' H' (U y)) |}.
+Next Obligation.  (* rewrite <- comp_assoc. fails *)
+split ; intro.
+- rewrite <- comp_assoc.  rewrite <- fmap_comp.
+apply iffeq.  apply setoid_sym. apply iffeq.
+rewrite fmap_comp.  rewrite <- comp_assoc.  exact X.
+- rewrite comp_assoc.  rewrite <- fmap_comp.
+apply iffeq.  apply setoid_sym. apply iffeq.
+rewrite fmap_comp.  rewrite comp_assoc.  exact X.
+Qed.
+
+Check Adjunction_IffEq_comp_obligation_1.
+Print Adjunction_IffEq_comp.
+
+(*
+Set Printing Implicit. 
+Unset Printing Implicit. 
+*)
