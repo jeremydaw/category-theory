@@ -84,12 +84,9 @@ Print Implicit ret3.
 (* prove that map3 is a functor *)
 Program Definition Functor_from_3 (H : Monad3) : Functor :=
   {| fobj := M ; fmap := @map3 H |}.
-Next Obligation.  proper. apply map3_respects.
-rewrite X. (* setoid rewrite fail without using map3_respects. *)
-reflexivity. Qed.
+Next Obligation.  proper. apply map3_respects. exact X. Qed.
 Next Obligation.  unfold map3. pose ext_respects.
-rewrite id_right. (* fails without using ext_respects *)
-apply m_id_l. Qed.
+rewrite id_right. (* fails without using ext_respects *) apply m_id_l. Qed.
 Next Obligation.  unfold map3. rewrite m_assoc.
 apply ext_respects.  rewrite !comp_assoc. (* fails w/o ext_respects *)
 rewrite m_id_r. reflexivity. Qed.
@@ -98,6 +95,9 @@ Print Implicit Functor_from_3.
 Check Functor_from_3_obligation_1.
 Check Functor_from_3_obligation_2.
 Check Functor_from_3_obligation_3.
+
+Definition map3_id := Functor_from_3_obligation_2.
+Definition map3_comp := Functor_from_3_obligation_3.
 
 (* 
 Set Printing Coercions.
@@ -119,6 +119,11 @@ Lemma ext_ext (H : Monad3) x y (f : x ~{ C }~> (M y)) :
   ext H (ext H f) ≈ ext H f ∘ join3 H.
 Proof. unfold join3. pose ext_respects.
 rewrite !m_assoc. rewrite id_right. reflexivity. Qed.
+
+Lemma ext_o (H : Monad3) x y z (f : x ~{ C }~> y) (g : y ~{ C }~> M z) :
+  ext H (g ∘ f) ≈ ext H g ∘ map3 H f.
+Proof. rewrite !ext_jm. rewrite Functor_from_3_obligation_3.
+apply comp_assoc. Qed.
 
 Program Definition Monad_from_3 (H : Monad3) : @Monad C (Functor_from_3 H) := 
   {| ret := @ret3 H ; join := @join3 H |}.
