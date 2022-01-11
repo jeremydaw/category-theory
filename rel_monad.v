@@ -229,10 +229,29 @@ Print Implicit obj.
 Print Implicit extr.
 Print Implicit hom.
 Print Implicit homset.
-Print Implicit uhom.
+Print Implicit compose.
 Print Implicit ext_respects.
 Print Implicit Adjunction_IffEq.
 Print Adjunction_IffEq.
+
+Definition KRM {C J T} Tr := @Kleisli_from_RM C J T Tr.
+(* partial monads *)
+
+Record Pmonad {C J T} (Tr : @Rmonad C J T) : Type := Build_Pmonad
+  { retp : forall {x : obj[C]}, x ~{ C }~> T x ;
+    extp : forall {x y} (f : x ~{ C }~> T y), J x ~{ C }~> T y ;
+    extp_respects : ∀ x y : obj[C], Proper (equiv ==> equiv) (@extp x y) ;
+    (* extr Tr (extp f) ∘ retp and extr Tr (extp g) ∘ f
+      would be composition in the Kleisli category
+      if retp and f were of the right type, note pm_assoc' *)
+    pm_id_r : forall x y (f : x ~{ C }~> T y), extr Tr (extp f) ∘ retp ≈ f ;
+    pm_id_l : forall x, extp retp ≈ @id (KRM Tr) x ;
+    (*
+    pm_assoc' : forall x y z (g : y ~{ C }~> T z) (f : x ~{ C }~> T y),
+      @compose (KRM Tr) _ _ _ (extp g) (extp f) ≈ extp (extr Tr (extp g) ∘ f) ;
+      *)
+    pm_assoc : forall x y z (g : y ~{ C }~> T z) (f : x ~{ C }~> T y),
+      extr Tr (extp g) ∘ extp f ≈ extp (extr Tr (extp g) ∘ f) }.
 
 (*
 TO CONTINUE FROM HERE
