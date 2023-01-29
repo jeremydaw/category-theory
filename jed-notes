@@ -1,4 +1,16 @@
 
+Sun 29 Jan 2023 following works in the switch coq-equations, using Coq 8.15.2
+with git branch -v showing * jed    ffe1251 start on partial monads
+make clean
+make # Construction/Comma/Adjunction.v takes 24 mins
+coqc -R /home/jeremy/coq/category-theory Category jed_adjfuns.v
+coqc -R /home/jeremy/coq/category-theory Category jed_monad.v
+coqc -R /home/jeremy/coq/category-theory Category rel_monad.v
+coqtop -color no -R /home/jeremy/coq/category-theory Category
+Load jed_JD.
+but the following fails,  with Error: The section CMN needs to be closed.
+coqc -R /home/jeremy/coq/category-theory Category jed_JD.v
+
 coqtop -color no -R /home/jeremy/coq/category-theory Category
 
 Require Import Category.Monad.Kleisli.
