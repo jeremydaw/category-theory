@@ -11,6 +11,16 @@ Load jed_JD.
 but the following fails,  with Error: The section CMN needs to be closed.
 coqc -R /home/jeremy/coq/category-theory Category jed_JD.v
 
+then merged some of master to get git branch -v showing
+* jed    460b8cd Merge commit 'bd348995c0d306a895bf' into jed
+File "./jed_adjfuns.v", line 53, characters 15-18:
+Error: Syntax Error: Lexer: Undefined token
+line 53 is Context (F : D ⟶ C). (first line with funny symbols)
+fixed this (import Functor) then
+File "./jed_adjfuns.v", line 84, characters 0-25:
+Error: Expected a single focused goal but 2 goals are focused.
+fixed this, more errors to do with H as Adjunction_IffEq
+
 coqtop -color no -R /home/jeremy/coq/category-theory Category
 
 Require Import Category.Monad.Kleisli.
@@ -34,6 +44,8 @@ Unset Printing Coercions.
 Unset Printing Implicit. 
 
 setoids
+Require Import Coq.Setoids.Setoid.
+Require Import Coq.Classes.SetoidClass.
 Build_Setoid : ∀ (A : Type) (equiv : crelation A), Equivalence equiv → Setoid A
 Build_SetoidObject : ∀ carrier : Type, Setoid carrier → SetoidObject
 Build_SetoidMorphism
@@ -129,6 +141,7 @@ from : ?x ≅ ?y -> ?y ~{ ?C }~> ?x
 Theory/Isomorphism.v:Coercion to : Isomorphism >-> hom.
 Notation "f '⁻¹'" := from f
 
+Check Category.Theory.Functor.Functor.
 Record Functor (C D : Category) : Type := Build_Functor { 
   fobj : obj[C] -> obj[D];
   fmap : forall x y : obj[C], x ~{ C }~> y -> fobj x ~{ D }~> fobj y;
@@ -161,7 +174,9 @@ Record Transform (C D : Category) (F G : C ⟶ D) : Type := Build_Transform
       Setoid.equiv (fmap[G] f ∘ transform x) (transform y ∘ fmap[F] f);
     naturality_sym ... }
 
+Check Category.Theory.Natural.Transformation.Transform.
 Notation "F ⟹ G" := Transform 
+Locate "⟹" ;
 Coq < Check Transform.  ?F ⟹ ?G : Type
 where ... ?F : [ |- ?C ⟶ ?D] ?G : [ |- ?C ⟶ ?D]
 Check @Transform : forall (C D : Category) (F G : C ⟶ D), Type.

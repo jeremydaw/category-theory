@@ -1,14 +1,25 @@
 
 (*
 coqc -R /home/jeremy/coq/category-theory Category jed_adjfuns.v
-coqtop -R /home/jeremy/coq/category-theory Category 
+coqtop -color no -R /home/jeremy/coq/category-theory Category 
+Load jed_adjfuns.
 *)
 
 Require Import Category.Lib.
 Require Import Category.Theory.Category.
+Require Import Category.Theory.Functor.
+Require Import Category.Theory.Morphisms.
+Require Import Category.Theory.Isomorphism.
+Require Import Category.Theory.Adjunction.
 Require Import Category.Theory.Natural.Transformation.
 Require Import Category.Adjunction.Natural.Transformation.
 Require Import Category.Adjunction.Hom.
+Require Import Category.Instance.Fun.
+Require Import Category.Instance.Sets. (* required for morphism below *)
+Require Import Coq.Classes.CMorphisms.
+(* this line introduces a bizarre error
+Require Import Category.Lib.Setoid. (* required for equiv *)
+*)
 
 Generalizable All Variables.
 Set Primitive Projections.
@@ -53,6 +64,15 @@ Context {D : Category}.
 Context (F : D ⟶ C).
 Context (U : C ⟶ D).
 
+(* adjunction definitions already done, see Adjunction/Hom.v *)
+Check Category.Adjunction.Hom.Build_Adjunction_Hom.
+Check Category.Adjunction.Natural.Transformation.Build_Adjunction_Transform.
+Check Category.Theory.Adjunction.Build_Adjunction.
+Check Category.Adjunction.Hom.Adjunction_Hom_to_Transform.
+Check Category.Adjunction.Hom.Adjunction_Transform_to_Hom.
+Check Category.Adjunction.Hom.Adjunction_Hom_to_Universal.
+Check Category.Adjunction.Hom.Adjunction_Universal_to_Hom.
+
 Class Adjunction_OW := {
   unitOW : Id[D] ⟹ U ◯ F ;
   (* there exists an adjoint function, from adj of Adjunction *)
@@ -72,7 +92,7 @@ Class Adjunction_IffEq := {
   }.
 
 Section AdjunctionIffEq.
-Context `(Adjunction_IffEq).
+Context {H : Adjunction_IffEq}.
 
 Program Definition iff_unit : Id ⟹ U ◯ F := {| transform := @unit' H |}.
 Next Obligation.  apply (@iffeq H).
@@ -80,8 +100,8 @@ Next Obligation.  apply (@iffeq H).
 rewrite fmap_comp, comp_assoc.
 pose (@iffeq H y _ id unit'). 
 pose (fst i).  require e.
-rewrite fmap_id, id_left.  reflexivity.
-rewrite e, id_left. reflexivity. Qed.
+- rewrite fmap_id, id_left.  reflexivity.
+- rewrite e, id_left. reflexivity. Qed.
 Next Obligation.  symmetry.  apply iff_unit_obligation_1. Qed.
 
 Program Definition iff_counit : F ◯ U ⟹  Id := {| transform := @counit' H |}.
@@ -89,14 +109,22 @@ Next Obligation.  symmetry.  apply (@iffeq H).
 rewrite fmap_comp, <- comp_assoc.
 pose (@iffeq H _ x counit' id). 
 pose (snd i).  require e.
-rewrite fmap_id, id_right.  reflexivity.
-rewrite e, id_right. reflexivity. Qed.
+- rewrite fmap_id, id_right.  reflexivity.
+- rewrite e, id_right. reflexivity. Qed.
 Next Obligation.  symmetry.  apply iff_counit_obligation_1. Qed.
 
 Print Implicit iff_counit.
 Print Implicit Adjunction_OW.
 Print Implicit Adjunction_Transform.
 Print Implicit naturality_sym.
+
+Check @Category.Adjunction.Hom.Build_Adjunction_Hom.
+Check @Category.Theory.Isomorphism.Build_Isomorphism.
+Check @Category.Theory.Natural.Transformation.Build_Transform.
+Check @Category.Theory.Natural.Transformation.transform.
+Check Category.Adjunction.Hom.Adjunction_Hom.
+Check Category.Theory.Isomorphism.Isomorphism.
+Check @Category.Theory.Isomorphism.to.
 
 Program Definition Adjunction_IffEq_to_Hom : Adjunction_Hom F U := {|
   hom_adj :=
@@ -119,26 +147,31 @@ rewrite iffeq. reflexivity. Qed.
 Next Obligation.  rewrite fmap_id, id_left, id_right.
 rewrite <- iffeq. reflexivity. Qed.
 
+End AdjunctionIffEq. (* was later *)
+
 (* Lemma or Program Definition - seems to make no difference,
   except when Print-ing it, to see the partial "program" *)
-Lemma Adjunction_IffEq_to_OW : Adjunction_OW.
-Proof.  exact (Build_Adjunction_OW iff_unit _ (@iffeq H)). Qed.
+Program Definition Adjunction_IffEq_to_OW (H : Adjunction_IffEq) :
+  Adjunction_OW.
+Proof.  exact (Build_Adjunction_OW (@iff_unit H) _ (@iffeq H)). Qed.
 
-Program Definition Adjunction_IffEq_to_Transform : Adjunction_Transform F U.
+Program Definition Adjunction_IffEq_to_Transform (H : Adjunction_IffEq) :
+  Adjunction_Transform F U.
 Proof. pose (@iffeq H).
 apply (Build_Adjunction_Transform iff_unit iff_counit) ; intro ; apply i.
 (* problem?, that iff_unit is nt, unit' is function, but there is a coercion *)
-rewrite fmap_id, id_left.  reflexivity.
-rewrite fmap_id, id_right.  reflexivity.
+- rewrite fmap_id, id_left.  reflexivity.
+- rewrite fmap_id, id_right.  reflexivity.
 Qed.
 
 Print Isomorphism.
 Print Adjunction.
 Print Adjunction_IffEq.
 
-Program Definition iff_adj x y : F x ~{ C }~> y ≊ x ~{ D }~> U y :=
-  {| to := {| morphism := fun f => fmap[U] f ∘ unit' |} ;
-   from := {| morphism := fun g => counit' ∘ fmap[F] g |} |}.
+Program Definition iff_adj (H : Adjunction_IffEq) x y :
+  F x ~{ C }~> y ≊ x ~{ D }~> U y :=
+  {| to := {| morphism := fun f => fmap[U] f ∘ (@unit' H _) |} ;
+   from := {| morphism := fun g => (@counit' H _) ∘ fmap[F] g |} |}.
 Next Obligation.
 unfold Proper. unfold respectful.  intros. rewrite X. reflexivity. Qed.
 Next Obligation.
@@ -150,8 +183,8 @@ Print Implicit iffeq.
 Print Implicit iff_adj.
 Print Implicit naturality.
 
-Program Definition Adjunction_IffEq_to_Universal : F ⊣ U := 
-  {| adj := iff_adj |}.
+Program Definition Adjunction_IffEq_to_Universal (H : Adjunction_IffEq) :
+  F ⊣ U := {| adj := iff_adj H |}.
 Next Obligation.  rewrite fmap_comp.  rewrite <- !comp_assoc.
 pose (naturality iff_unit _ _ g).  rewrite e. simpl. reflexivity. Qed.
 Next Obligation.  rewrite fmap_comp.  apply comp_assoc_sym. Qed.
@@ -159,7 +192,9 @@ Next Obligation.  rewrite fmap_comp.  apply comp_assoc. Qed.
 Next Obligation.  rewrite fmap_comp.  rewrite !comp_assoc.
 pose (naturality_sym iff_counit _ _ f).  rewrite e. simpl. reflexivity. Qed.
 
+(*
 End AdjunctionIffEq.
+*)
 
 Print Implicit hom_unit.
 Print Implicit hom_adj.
@@ -265,7 +300,7 @@ pose (fun y => snd (adjruc0 _ _ (coun y) id)).
 
 (* why is eapply required here ?? *)
 eapply (Build_Adjunction_IffEq (transform unitOW0) coun).
-intros.  require (e y). reflexivity.
+intros.  require (e y). { reflexivity. }
 (* apply adjruc0 to combination of triangle for id and rectangle for unit nt *)
 pose (adjruc0 _ _ (coun _ ∘ fmap[F] g) g). 
 require (fst i). { rewrite fmap_comp.
@@ -275,9 +310,8 @@ rewrite comp_assoc. rewrite e. apply id_left. }
 clear i. intro.
 (* rewrite <- X. fails - why? *)
 (* rewrite (adjruc0 _ _ f g). fails - why? *)
-pose (adjruc0 _ _ f g).
-apply (iffT_Transitive _ _ _ i).
-split ; apply setoid_trans ; rewrite X ; reflexivity. Qed.
+pose (adjruc0 _ _ f g). apply (iffT_Transitive _ _ _ i).
+rewrite X ; reflexivity. Qed.
 
 (* can use these to detect when there is a coerced function not
   shown at the head of a goal or a hypothesis
@@ -299,7 +333,7 @@ Program Definition Adjunction_Universal_to_IffEq (A : F ⊣ U)
 Next Obligation. 
 split ; intro ; rewrite <- X ; rewrite <- to_adj_nat_r ;
   rewrite <- from_adj_nat_l ; rewrite id_left, id_right.
-exact (iso_from_to (adj[A]) f).
+{ exact (iso_from_to (adj[A]) f). }
 (* this works because (iso_from_to (adj[A])) is
   (adj[A])⁻¹ ∘ adj[A] ≈ id{Sets}
   and the definition of ≈ in SetoidMorphism_Setoid is
@@ -426,11 +460,13 @@ Print Adjunction_OW.
 Print Adjunction.
 Print Implicit Functor.
 Print Functor.
+Check respectful Setoid.equiv Setoid.equiv.
 
 Class Adjunction_OWnf {C D} (U : C ⟶ D) (Fo : obj[D] -> obj[C]) := {
   unitOWnf : forall {x : obj[D]}, (x ~{ D }~> U (Fo x)) ;
   adjrnf : forall {x y} (g : x ~{ D }~> U y), Fo x ~{ C }~> y ;
-  adjrnf_respects : ∀ {x y}, Proper (equiv ==> equiv) (@adjrnf x y) ;
+  adjrnf_respects : ∀ {x y}, 
+    CMorphisms.Proper (Setoid.equiv ==> Setoid.equiv) (@adjrnf x y) ;
   (* the adjoint arrow is the unique one which makes the diagram commute *)
   adjrucnf : forall {x y} (f : Fo x ~{ C }~> y) (g : x ~{ D }~> U y),
     iffT (fmap[U] f ∘ unitOWnf ≈ g) (adjrnf g ≈ f)
@@ -443,18 +479,25 @@ Print Implicit adjrnf.
 *)
 Print Adjunction_OWnf.
 
+Check Coq.Classes.CRelationClasses.Equivalence Category.Lib.Setoid.equiv.
+Check Setoid.setoid_equiv.
+Locate Equivalence_Reflexive.
+Check CRelationClasses.Equivalence_Reflexive :
+  CRelationClasses.Reflexive Setoid.equiv.
+
 Program Definition Adjunction_nf_to_fun {C D} U Fo (H : Adjunction_OWnf U Fo) :
   @Functor D C := {| fobj := Fo ;
     fmap := fun x y h => adjrnf (unitOWnf ∘ h) |}.
 Next Obligation. proper. apply adjrnf_respects.
-  apply compose_respects. apply setoid_refl. apply X. Qed.
+  apply compose_respects. - reflexivity. - apply X. Qed.
 Next Obligation. apply adjrucnf.  rewrite fmap_id.
   rewrite id_right. apply id_left. Qed.
 Next Obligation. apply adjrucnf.  rewrite fmap_comp.
 (* a more complex consequence of iff of equivs - maybe a lemma? *)
-pose (fun x y (g : x ~> U y) => snd (adjrucnf _ g) (setoid_refl _ _)) as rfu.
+pose (fun x y (g : x ~> U y) => snd (adjrucnf _ g) 
+  (Coq.Classes.CRelationClasses.Equivalence_Reflexive _)) as rfu.
 rewrite <- comp_assoc.  rewrite rfu.  rewrite comp_assoc.  rewrite rfu.
-apply setoid_sym.  apply comp_assoc. Qed.
+symmetry.  apply comp_assoc. Qed.
 
 Print Implicit unitOWnf.
 Print Implicit Transform.
@@ -524,10 +567,10 @@ Program Definition Adjunction_IffEq_comp {C D E F F' U U'}
 Next Obligation.  (* rewrite <- comp_assoc. fails *)
 split ; intro.
 - rewrite <- comp_assoc.  rewrite <- fmap_comp.
-apply iffeq.  apply setoid_sym. apply iffeq.
+apply iffeq.  symmetry. apply iffeq.
 rewrite fmap_comp.  rewrite <- comp_assoc.  exact X.
 - rewrite comp_assoc.  rewrite <- fmap_comp.
-apply iffeq.  apply setoid_sym. apply iffeq.
+apply iffeq.  apply symmetry. apply iffeq.
 rewrite fmap_comp.  rewrite comp_assoc.  exact X.
 Qed.
 
