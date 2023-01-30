@@ -21,6 +21,10 @@ File "./jed_adjfuns.v", line 84, characters 0-25:
 Error: Expected a single focused goal but 2 goals are focused.
 fixed this, more errors to do with H as Adjunction_IffEq
 
+new branches jednr (not rebased - actually merged with master changes to Oct)
+jedpr (rebased on master to Oct, works)
+jed (going to rebase on more recent master)
+
 coqtop -color no -R /home/jeremy/coq/category-theory Category
 
 Require Import Category.Monad.Kleisli.

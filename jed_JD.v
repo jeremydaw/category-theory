@@ -75,7 +75,7 @@ Next Obligation. apply P3. Qed.
 Next Obligation.  pose (map3_respects N3).  rewrite !ext_o.
 rewrite !jed_monad.Functor_from_3_obligation_3.
 rewrite !comp_assoc.  rewrite P4.  apply comp_o_r.
-rewrite <- !comp_assoc.  apply comp_o_l.  apply setoid_sym.  apply P1. Qed.
+rewrite <- !comp_assoc.  apply comp_o_l.  symmetry.  apply P1. Qed.
 
 Print Implicit fmap.
 Print Implicit ret3.
@@ -83,3 +83,5 @@ Print Implicit compose.
 Print Implicit id.
 Print Implicit join3.
 Print Implicit map3.
+
+End CMN. (* more to be done, but this lets the file compile *)
