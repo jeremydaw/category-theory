@@ -10,6 +10,9 @@ Require Import Category.Theory.Category.
 Require Import Category.Theory.Functor.
 Require Import Category.Theory.Monad.
 Require Import Category.Theory.Adjunction.
+Require Import Category.Theory.Isomorphism.
+Require Import Category.Theory.Natural.Transformation.
+Require Import Category.Instance.Sets. (* required for morphism below *)
 Require Import Category.Monad.Kleisli.
 Require Import jed_adjfuns.
 
@@ -145,11 +148,11 @@ Check Monad_from_3_obligation_5.
 
 Lemma comp_o_r : ∀ C (y z : obj[C]) (f g : y ~{ C }~> z), f ≈ g → 
   ∀ x (h : x ~{ C }~> y), f ∘ h ≈ g ∘ h.
-Proof. intros. apply compose_respects. apply X. apply setoid_refl. Qed.
+Proof. intros. apply compose_respects. - apply X. - reflexivity. Qed.
 
 Lemma comp_o_l : ∀ C (y z : obj[C]) (f g : y ~{ C }~> z), f ≈ g → 
   ∀ x (h : z ~{ C }~> x), h ∘ f ≈ h ∘ g.
-Proof. intros. apply compose_respects. apply setoid_refl. apply X. Qed.
+Proof. intros. apply compose_respects. - reflexivity. - apply X. Qed.
 
 Print Implicit comp_o_l.  Print Implicit comp_o_r.
 
@@ -226,11 +229,11 @@ Program Definition Kleisli_from_3 {C M} (H : @Monad3 C M) : Category :=
     compose := fun x y z (g : y ~{ C }~> M z) (f : x ~{ C }~> M y) =>
       ext H g ∘ f |}.
 Next Obligation. proper.  apply compose_respects.
-apply ext_respects. exact X. exact X0. Qed.
+- apply ext_respects. exact X. - exact X0. Qed.
 Next Obligation.  rewrite m_id_l. apply id_left. Qed.
 Next Obligation. apply m_id_r. Qed.
 Next Obligation. rewrite comp_assoc.  apply comp_o_r.  apply m_assoc. Qed.
-Next Obligation. apply setoid_sym.  apply Kleisli_from_3_obligation_4. Qed.
+Next Obligation. symmetry.  apply Kleisli_from_3_obligation_4. Qed.
 
 Check Kleisli_from_3_obligation_1.
 Check Kleisli_from_3_obligation_2.
@@ -246,7 +249,7 @@ Program Definition ext_functor {C M} (H : @Monad3 C M) :
   {| fobj := M ; fmap := fun x y (f : x ~{ C }~> M y) => ext H f |}.
 Next Obligation. proper. apply ext_respects. apply X. Qed.
 Next Obligation. apply m_id_l. Qed.
-Next Obligation. apply setoid_sym. apply m_assoc. Qed.
+Next Obligation. symmetry. apply m_assoc. Qed.
 
 Program Definition ret_o_functor {C M} (H : @Monad3 C M) :
   @Functor C (Kleisli_from_3 H)  :=
@@ -277,7 +280,7 @@ Program Definition k_adj {C M} (H : @Monad3 C M) :
     counit' := fun y => @id C (M y) |}.
 Next Obligation. rewrite !comp_assoc.
 rewrite !m_id_r. rewrite id_left.
-split ; apply setoid_sym. Qed.
+split ; symmetry ; assumption. Qed.
 
 Check k_adj.  Check k_adj_obligation_1.
 
@@ -307,7 +310,7 @@ Check adjr.  Check unitOW.  Check adjruc. (* give ∀ (F U : D ⟶ D) ... *)
 assert (@adjr C D F U H x (F x) (unitOW _ _ x) ≈ id{C}).
 { apply adjruc.  rewrite fmap_id. apply id_left. }
 rewrite X.  apply fmap_id. *)
-eapply setoid_trans. 2: apply fmap_id.
+etransitivity. 2: apply fmap_id.
 apply fmap_respects.  apply adjruc.  rewrite fmap_id. apply id_left. Qed.
  
 Next Obligation.
@@ -324,7 +327,7 @@ Program Definition Adjunction_IffEq_to_Monad3 {C D F U}
     ext := fun x z h => fmap[U] ((counit' H _ ∘ fmap[F] h)) |}.
 Next Obligation. proper. apply fmap_respects. rewrite X. reflexivity. Qed.
 Next Obligation. apply iffeq.  reflexivity. Qed.
-Next Obligation.  eapply setoid_trans. 2: apply fmap_id.
+Next Obligation.  etransitivity. 2: apply fmap_id.
 apply fmap_respects. apply iffeq. rewrite fmap_id. apply id_left. Qed.
 Next Obligation.  rewrite <- fmap_comp. apply fmap_respects. 
 symmetry. apply iffeq.
