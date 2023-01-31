@@ -186,12 +186,12 @@ Program Definition Kleisli_from_RM {C J T} (Tr : @Rmonad C J T) : Category :=
     compose := fun x y z (g : J y ~{ C }~> T z) (f : J x ~{ C }~> T y) =>
       extr Tr g ∘ f |}.
 Next Obligation. proper.  apply compose_respects.
-apply extr_respects. exact X. exact X0. Qed.
+- apply extr_respects. exact X. - exact X0. Qed.
 Next Obligation.  rewrite rm_id_l. apply id_left. Qed.
 Next Obligation. apply rm_id_r. Qed.
 Next Obligation. rewrite comp_assoc.  apply comp_o_r.  apply rm_assoc. Qed.
 Next Obligation. rewrite comp_assoc.  apply comp_o_r.
-apply setoid_sym.  apply rm_assoc. Qed.
+symmetry.  apply rm_assoc. Qed.
 
 Check Kleisli_from_RM_obligation_1.
 Check Kleisli_from_RM_obligation_2.
@@ -207,7 +207,7 @@ Program Definition extr_functor {C J T} (Tr : @Rmonad C J T) :
   {| fobj := T ; fmap := fun x y (f : J x ~{ C }~> T y) => extr Tr f |}.
 Next Obligation. proper. apply extr_respects. apply X. Qed.
 Next Obligation. apply rm_id_l. Qed.
-Next Obligation. apply setoid_sym. apply rm_assoc. Qed.
+Next Obligation. symmetry. apply rm_assoc. Qed.
 
 Program Definition retr_o_functor {C J T} (J3 : @Monad3 C J)
   (Tr : @Rmonad C J T) : @Functor C (Kleisli_from_RM Tr)  :=
@@ -262,7 +262,7 @@ Program Definition k_adj {C M} (H : @Monad3 C M) :
     counit' := fun y => @id C (M y) |}.
 Next Obligation. rewrite !comp_assoc.
 rewrite !m_id_r. rewrite id_left.
-split ; apply setoid_sym. Qed.
+split ; symmetry. Qed.
 
 Check k_adj.  Check k_adj_obligation_1.
 

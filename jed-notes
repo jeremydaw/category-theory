@@ -21,9 +21,8 @@ File "./jed_adjfuns.v", line 84, characters 0-25:
 Error: Expected a single focused goal but 2 goals are focused.
 fixed this, more errors to do with H as Adjunction_IffEq
 
-new branches jednr (not rebased - actually merged with master changes to Oct)
-jedpr (rebased on master to Oct, works)
-jed (going to rebase on more recent master)
+Tue 31 Jan 2023 the above now work with jed rebased on 
+c57a25c72cb9e3bd9ce070655e7bf402d326e8f9 (Fri Dec 16 14:20:30 2022 -0800)
 
 coqtop -color no -R /home/jeremy/coq/category-theory Category
 
