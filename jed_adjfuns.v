@@ -65,13 +65,20 @@ Context (F : D ⟶ C).
 Context (U : C ⟶ D).
 
 (* adjunction definitions already done, see Adjunction/Hom.v *)
-Check Category.Adjunction.Hom.Build_Adjunction_Hom.
-Check Category.Adjunction.Natural.Transformation.Build_Adjunction_Transform.
-Check Category.Theory.Adjunction.Build_Adjunction.
+Print Category.Adjunction.Hom.Build_Adjunction_Hom.
+Print Category.Adjunction.Natural.Transformation.Build_Adjunction_Transform.
+Print Category.Theory.Adjunction.Build_Adjunction.
+(*
+Notation "F ∹ G" := (Adjunction_Transform F G) : adjunction_type_scope
+Notation "F ⊣ G" := (Adjunction F G) : category_scope
+*)
+
 Check Category.Adjunction.Hom.Adjunction_Hom_to_Transform.
 Check Category.Adjunction.Hom.Adjunction_Transform_to_Hom.
 Check Category.Adjunction.Hom.Adjunction_Hom_to_Universal.
 Check Category.Adjunction.Hom.Adjunction_Universal_to_Hom.
+Require Import Category.Adjunction.Natural.Transformation.Universal.
+Check Adjunction_from_Transform.  Check Adjunction_to_Transform.
 
 Class Adjunction_OW := {
   unitOW : Id[D] ⟹ U ◯ F ;
@@ -118,11 +125,9 @@ Print Implicit Adjunction_OW.
 Print Implicit Adjunction_Transform.
 Print Implicit naturality_sym.
 
-Check @Category.Adjunction.Hom.Build_Adjunction_Hom.
 Check @Category.Theory.Isomorphism.Build_Isomorphism.
 Check @Category.Theory.Natural.Transformation.Build_Transform.
 Check @Category.Theory.Natural.Transformation.transform.
-Check Category.Adjunction.Hom.Adjunction_Hom.
 Check Category.Theory.Isomorphism.Isomorphism.
 Check @Category.Theory.Isomorphism.to.
 
@@ -149,14 +154,11 @@ rewrite <- iffeq. reflexivity. Qed.
 
 End AdjunctionIffEq. (* was later *)
 
-(* Lemma or Program Definition - seems to make no difference,
-  except when Print-ing it, to see the partial "program" *)
-Program Definition Adjunction_IffEq_to_OW (H : Adjunction_IffEq) :
-  Adjunction_OW.
+(* Lemma or Program Definition - seems to make no difference *)
+Lemma Adjunction_IffEq_to_OW (H : Adjunction_IffEq) : Adjunction_OW.
 Proof.  exact (Build_Adjunction_OW (@iff_unit H) _ (@iffeq H)). Qed.
 
-Program Definition Adjunction_IffEq_to_Transform (H : Adjunction_IffEq) :
-  Adjunction_Transform F U.
+Lemma Adjunction_IffEq_to_Transform (H : Adjunction_IffEq) : F ∹ U.
 Proof. pose (@iffeq H).
 apply (Build_Adjunction_Transform iff_unit iff_counit) ; intro ; apply i.
 (* problem?, that iff_unit is nt, unit' is function, but there is a coercion *)
@@ -164,9 +166,7 @@ apply (Build_Adjunction_Transform iff_unit iff_counit) ; intro ; apply i.
 - rewrite fmap_id, id_right.  reflexivity.
 Qed.
 
-Print Isomorphism.
-Print Adjunction.
-Print Adjunction_IffEq.
+Print Build_Isomorphism.
 
 Program Definition iff_adj (H : Adjunction_IffEq) x y :
   F x ~{ C }~> y ≊ x ~{ D }~> U y :=
@@ -192,14 +192,10 @@ Next Obligation.  rewrite fmap_comp.  apply comp_assoc. Qed.
 Next Obligation.  rewrite fmap_comp.  rewrite !comp_assoc.
 pose (naturality_sym iff_counit _ _ f).  rewrite e. simpl. reflexivity. Qed.
 
-(*
-End AdjunctionIffEq.
-*)
-
-Print Implicit hom_unit.
-Print Implicit hom_adj.
-Print Implicit transform.
-Print Implicit naturality.
+Check Category.Adjunction.Hom.hom_unit.
+Check Category.Adjunction.Hom.hom_adj.
+Print Implicit Category.Theory.Natural.Transformation.transform.
+Print Implicit Category.Theory.Natural.Transformation.naturality.
 
 (*
 (* turn forall x : A * B, ... to forall (x : A) (y : B), ... *) 
@@ -386,7 +382,6 @@ Print Implicit naturality_sym.
 Print Implicit id.
 Print Category.Adjunction.Natural.Transformation.Adjunction_Transform.
 
-Print Adjunction_IffEq.
 
 (* an alternative attempt at Adjunction_Universal_to_IffEq had at one point
 h : {| carrier := F x ~{ C }~> F x;
@@ -450,16 +445,10 @@ Context {F : D ⟶ C}.
 Context {U : C ⟶ D}.
 *)
 
-Print Implicit Adjunction_Transform.
-Print Implicit Adjunction_IffEq.
-Print Implicit Adjunction_OW.
-Print Implicit Adjunction.
-Print Adjunction_Transform.
-Print Adjunction_IffEq.
-Print Adjunction_OW.
-Print Adjunction.
+Print Build_Adjunction_IffEq.
+Print Build_Adjunction_OW.
 Print Implicit Functor.
-Print Functor.
+Print Build_Functor.
 Check respectful Setoid.equiv Setoid.equiv.
 
 Class Adjunction_OWnf {C D} (U : C ⟶ D) (Fo : obj[D] -> obj[C]) := {
@@ -472,18 +461,7 @@ Class Adjunction_OWnf {C D} (U : C ⟶ D) (Fo : obj[D] -> obj[C]) := {
     iffT (fmap[U] f ∘ unitOWnf ≈ g) (adjrnf g ≈ f)
   }.
 
-(*
-Print Implicit Adjunction_OWnf.
-Print Implicit adjrucnf.
-Print Implicit adjrnf.
-*)
-Print Adjunction_OWnf.
-
-Check Coq.Classes.CRelationClasses.Equivalence Category.Lib.Setoid.equiv.
-Check Setoid.setoid_equiv.
-Locate Equivalence_Reflexive.
-Check CRelationClasses.Equivalence_Reflexive :
-  CRelationClasses.Reflexive Setoid.equiv.
+Print Build_Adjunction_OWnf.
 
 Program Definition Adjunction_nf_to_fun {C D} U Fo (H : Adjunction_OWnf U Fo) :
   @Functor D C := {| fobj := Fo ;
@@ -527,9 +505,7 @@ Program Definition Adjunction_nf_to_OW {C D} U Fo
 
 Print Implicit Adjunction_nf_to_OW.
 Check Adjunction_nf_to_OW.
-Print Adjunction_OW.
 Print Implicit Adjunction_OWnf.
-Print Adjunction_OWnf.
 Print Implicit adjruc.
 
 (* the converse to this should be quite trivial *)
@@ -552,12 +528,9 @@ Unlikely as Class Adjunction_OW says nothing about fmap[F]
 except that unitOW is a nt
 *)
 
-Print Adjunction_IffEq.
-Print Implicit Adjunction_IffEq.
-Print Implicit Build_Adjunction_IffEq.
-Print Adjunction_OWnf.
 Print Implicit unit'.
 Print Implicit Compose.
+
 (* composition of adjunctions *)
 Program Definition Adjunction_IffEq_comp {C D E F F' U U'} 
   (H : @Adjunction_IffEq C D F U) (H' : @Adjunction_IffEq D E F' U') :
