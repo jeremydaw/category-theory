@@ -216,6 +216,14 @@ Ltac under_forall2 f nun :=
   unfold all2T in ufX ; clear nun ; rename ufX into nun ].
 *)   
 
+(* should we try using 
+Check @hom_fmap_counit_unit.
+Check @hom_counit_fmap_unit.
+Check @hom_unit.
+Check @hom_counit.
+see Adjunction/Hom.v
+but this goes via naturality of unit and counit, which we don't need *)
+
 Lemma Adjunction_Hom_to_IffEq (A : Adjunction_Hom F U) : Adjunction_IffEq.
 Proof.
 destruct A.  destruct hom_adj.
@@ -226,49 +234,30 @@ pose (fun y => tcoun (U y, y) id) as coun.
 simpl in *. clear nsun nscoun. (* not used *)
 
 (* now convert forall pair to two foralls *)
-(* these fail 
+(* because these fail 
 rewrite -> fmap_id, id_left, id_right in iso_to_from.
 rewrite fmap_id, id_left, id_right in iso_from_to.
 *)
 (* simpler approach to singling quantified arguments *)
-pose (fun a b c d j k => nun (a, b) (c, d) (j, k)) as nuns. simpl in nuns.
-pose (fun a b c d j k => ncoun (a, b) (c, d) (j, k)) as ncouns. simpl in ncouns.
-clearbody nuns ncouns. clear nun ncoun.
+pose (fun a b c d j k => nun (a, b) (c, d) (j, k)) as nuns.
+pose (fun a b c d j k => ncoun (a, b) (c, d) (j, k)) as ncouns.
+simpl in nuns.  simpl in ncouns.  clearbody nuns ncouns. 
 
 (* note, this is good for understanding tun, tcoun,
   works because of implicit coercion morphism *)
 pose (fun x y f => tun (x, y) f) as tuns. simpl in tuns.
 pose (fun x y g => tcoun (x, y) g) as tcouns. simpl in tcouns.
 
-apply (Build_Adjunction_IffEq un coun).  intros.
-(* these lines solve the rewriting problem *)
+apply (Build_Adjunction_IffEq un coun).
+intros.  unfold un. unfold coun.
+(* some previous version required these but not now
 pose (proper_morphism (tun (x, y))) as ptuxy.
-pose (proper_morphism (tcoun (x, y))) as ptcxy.
-split ; intros ; rewrite <- X.
-
-- pose (nuns _ _ _ _ id f id).
-rewrite id_right in e. unfold un. rewrite e.
-(* rewrite fmap_id in e. fails - see details in 2nd subgoal *)
-rewrite fmap_id, !id_right.
-pose (ncouns _ _ _ _ (tun (x, y) f) id id).  simpl in e0.
-rewrite id_left in e0. unfold coun. rewrite e0.
-rewrite fmap_id, !id_left.
-rewrite iso_from_to, fmap_id, id_left. apply id_right.
-
-- pose (ncouns _ _ _ _ g id id).
-(* destruct (tcoun (x, y)). fails *)
-rewrite id_left in e. unfold coun. rewrite e.
-(* destruct (tcoun (x, y)) as [mtcxy ptcxy].
-  fails before rewrite id_left in e. - why? *)
-(* after destruct (tcoun (x, y)) can rewrite as we want,
-  but how to get back tcoun _  from mtcxy *)
-
-rewrite fmap_id, !id_left. (* works after the ptcxy line *)
-pose (nuns _ _ _ _ id (tcoun (x, y) g) id).
-rewrite id_right in e0. unfold un. simpl in e0. rewrite e0. 
-rewrite fmap_id, !id_right. (* requires pose ... as ptuxy. line *)
-
-rewrite iso_to_from, fmap_id, id_left. apply id_right.
+pose (proper_morphism (tcoun (x, y))) as ptcxy. *)
+pose (ncouns _ _ _ _ g id id).  rewrite fmap_id, !id_left in e.
+pose (nuns _ _ _ _ id f id).  rewrite fmap_id, !id_right in e0.
+rewrite e, e0.  split ; intros ; rewrite <- X.
+- rewrite iso_from_to, fmap_id, id_left. apply id_right.
+- rewrite iso_to_from, fmap_id, id_left. apply id_right.
 Qed.
 
 Print Implicit Adjunction_Hom_to_IffEq.

@@ -29,7 +29,7 @@ Unset Printing Implicit.
 *)
 
 Locate "∘". (* this is altered by Category.Theory.Category. *)
-Print Monad.
+Print Category.Theory.Monad.Monad.
 (* Monad: including 2 properties of function, 7 conditions,
   note that the first two of the 5 given say that ret and join
   are natural transformations *)
@@ -171,7 +171,7 @@ Print Implicit Build_Monad3.
 Print Implicit equiv.
 Print Implicit join_fmap_join.
 Print Implicit compose_respects.
-Print Monad.
+Print Category.Theory.Monad.Monad.
 
 (* here are two ways of setting up the same proof *)
 Lemma Monad_to_3 C M (H : @Monad C M) : @Monad3 C (@fobj _ _ M).
@@ -212,6 +212,8 @@ Set Printing Implicit.
 Unset Printing Coercions.
 Unset Printing Implicit.
 *)
+Print Category.Monad.Kleisli.Kleisli. (* Kleisli construction is a category *)
+Print Implicit Category.Monad.Kleisli.kleisli_compose.
 Print Implicit m_id_l.
 Print Implicit Functor.
 Print Functor.
@@ -298,8 +300,7 @@ Program Definition Adjunction_OW_to_Monad3 {C D} F U
      ext := fun x z h => fmap[U] (adjr F U h : F x ~{ C }~> F z) |}.
 Next Obligation. proper. apply fmap_respects.
 apply adjruc. rewrite X. apply adjruc. reflexivity. Qed.
-Next Obligation.  Check adjr.  Check adjruc.  Check adjruc. (* types OK *)
-apply adjruc. reflexivity. Qed.
+Next Obligation.  apply adjruc. reflexivity. Qed.
 
 Next Obligation. (* Coq misbehaves here *)
 Check adjr.  Check unitOW.  Check adjruc. (* give ∀ (F U : D ⟶ D) ... *)
