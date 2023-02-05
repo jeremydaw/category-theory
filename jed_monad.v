@@ -212,6 +212,8 @@ Set Printing Implicit.
 Unset Printing Coercions.
 Unset Printing Implicit.
 *)
+
+(** the Kleisli category of a monad **)
 Print Category.Monad.Kleisli.Kleisli. (* Kleisli construction is a category *)
 Print Implicit Category.Monad.Kleisli.kleisli_compose.
 Print Implicit m_id_l.
@@ -290,7 +292,7 @@ Print Implicit Compose. (* composition of functors, "F ◯ G" := Compose F G *)
 Print Implicit adjruc.
 Print Implicit adjrucnf.
 
-(* Every adjunction gives rise to a monad. *)
+(** Every adjunction gives rise to a monad. **)
 Require Category.Monad.Adjunction.
 Check Category.Monad.Adjunction.Adjunction_Monad.
 
@@ -368,6 +370,87 @@ Lemma AIE_rf_comp_U {C D F U} (H : @Adjunction_IffEq C D F U) :
 Proof. simpl.  exists (fun x => (@iso_id _ (U (F x)))). simpl.
 intros.  rewrite id_left.  rewrite id_right. reflexivity. Qed.
 
+(** Eilenberg-Moore category **)
+Require Import Category.Monad.Algebra.
+Print Category.Monad.Algebra.Build_TAlgebra.
+Print Category.Monad.Algebra.Build_TAlgebraHom.
+Require Import Category.Monad.Eilenberg.Moore.
+Check Category.Monad.Eilenberg.Moore.EilenbergMoore.
+Check @Category.Monad.Eilenberg.Moore.EilenbergMoore.
+Print Category.Monad.Eilenberg.Moore.EilenbergMoore.
+
+(* join of a monad M is an M-algebra *)
+Program Definition join_is_alg C M H a : @TAlgebra C M H (fobj[M] a) :=
+  {| t_alg := join ; t_id := join_ret ; t_action := join_fmap_join |}.
+
+(* obtaining the object and arrow from an object of the Eilenberg-Moore
+  category (which is an algebra of existential type) *)
+(* note notation `1 (y) meaning (projT1 y), etc *)
+Definition alg_obj {C M H} (alg : ∃ a : obj[C], @TAlgebra C M H a) :=
+  projT1 alg : obj[C].
+Definition alg_arr {C M H} (alg : ∃ a : obj[C], @TAlgebra C M H a) :=
+  t_alg[projT2 alg].
+Definition alg_obj_alt {C M H} alg := cod (@alg_arr C M H alg).
+Definition alg_hom {C M H} (x y : ∃ a : obj[C], @TAlgebra C M H a)
+  (ah : TAlgebraHom M _ _ (projT2 x) (projT2 y)) := t_alg_hom[ah].
+
+(* JED version of Eilenberg-Moore category, because the version in
+Print Category.Monad.Eilenberg.Moore.EilenbergMoore.
+uses EilenbergMoore_obligation_1 where 
+EilenbergMoore_obligation_1 C M H seems to be H but can't be used
+because it is opaque and can't be made transparent; thus we find we need
+((∃ y, TAlgebra M y) = obj[EilenbergMoore M]) but can't prove it;
+
+Program Definition fun_to_EM C M (H : @Monad C M) : @Functor 
+  C (@EilenbergMoore C M H) :=
+  {| fobj := fun a => existT (@TAlgebra C M H) 
+    (fobj[M] a) (join_is_alg C M H a) |}.
+    gives error Unable to unify "@TAlgebra C M H" with
+ "λ a : obj[C], @TAlgebra C M (Moore.EilenbergMoore_obligation_1 C M H) a".
+
+Set Printing Implicit.
+Unset Printing Implicit.
+*)
+
+Program Definition JEM C T (H : @Monad C T) : Category := {|
+  obj     := ∃ a : C, @TAlgebra C T H a;
+  hom     := fun x y => TAlgebraHom T ``x ``y (projT2 x) (projT2 y);
+  homset  := fun _ _ => {| equiv := fun f g => t_alg_hom[f] ≈ t_alg_hom[g] |};
+  id      := fun _ => {| t_alg_hom := id |};
+  compose := fun _ _ _ f g => {| t_alg_hom := t_alg_hom[f] ∘ t_alg_hom[g] |}
+|}.
+Next Obligation.  rewrite fmap_comp.  rewrite comp_assoc.
+  rewrite <- t_alg_hom_commutes.  rewrite <- !comp_assoc.
+  rewrite <- t_alg_hom_commutes.  reflexivity.  Qed.
+
+Print JEM.
+
+Program Definition fun_from_JEM C M (H : @Monad C M) : @Functor 
+  (JEM C M H) C := {| fobj := alg_obj ; fmap := alg_hom |}.
+
+(* this fails re Setoids
+Program Definition fun_to_JEM C M (H : @Monad C M) : @Functor C (JEM C M H) :=
+  {| fobj := fun a => existT (@TAlgebra C M H) (fobj[M] a)
+    (join_is_alg C M H a) |}.
+  try to sort it out using Build_Functor with arguments
+  *)
+
+Lemma fun_to_JEM C M (H : @Monad C M) : @Functor C (JEM C M H).
+Check fun a => (existT (@TAlgebra C M H) (fobj[M] a) (join_is_alg C M H a) :
+  obj[JEM C M H]) : ∃ y, @TAlgebra C M H y.
+assert ((∃ y, @TAlgebra C M H y) = obj[JEM C M H]).
+- simpl. reflexivity. 
+(* above works, but with EilenbergMoore fails with Unable to unify
+"∃ a : obj[C], @TAlgebra C M (Moore.EilenbergMoore_obligation_1 C M H) a"
+with "∃ y : obj[C], @TAlgebra C M H y". *)
+- 
+eapply (Build_Functor C (JEM C M H)).
+eapply (Build_Functor C (JEM C M H) 
+  (fun a => existT (@TAlgebra C M H) (fobj[M] a) (join_is_alg C M H a))
+  (* next figure out the definition for fmap *)
+    ).
+Abort.
+
 Print Implicit naturality.
 Print Implicit Kleisli_from_3.
 Print Implicit ret_o_functor.
@@ -375,7 +458,7 @@ Print Implicit counit'.
 Print Implicit iffeq.
 Print Implicit fobj.
 Print Implicit iso_id.
-Print Functor.
+Print Category.Theory.Functor.Functor.
 Print Implicit Functor.
 Print Adjunction_IffEq.
 Print Implicit Kleisli_from_3.  

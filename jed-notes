@@ -194,14 +194,21 @@ Check fobj_respects.
 Check fmap_respects.
 
 Notation "C ⟶ D" := Functor 
+Notation "fobj[ F ]" := (@fobj _ _ F%functor)
+Notation "fmap[ F ]" := (@fmap _ _ F%functor _ _)
 Id[?C] : ?C ⟶ ?C
 Check @Compose : forall C D E : Category, D ⟶ E -> C ⟶ D -> C ⟶ E.
 Arguments C, D, E are implicit and maximally inserted
 Notation "F ◯ G" := Compose F G
 Check Compose_respects.
 
-(* Functors used as functions map objects of categories 
-Coercion fobj : Functor >-> Funclass. see Theory/Functor.v *)
+(* 
+Print Coercions.
+Functors used as functions map objects of categories 
+Coercion fobj : Functor >-> Funclass. see Theory/Functor.v 
+Categories used as types mean the set of objects
+Coercion obj : Category >-> Sortclass. see Theory/Category.v
+*)
 
 Category.Theory.Morphisms.Epic. epic. Monic. monic.
 Retraction. Section. section. retract. 
@@ -310,6 +317,8 @@ Notation "f <=< g" := (@compose Kleisli _ _ _ f g)
 Notation "f >=> g" := (@compose Kleisli _ _ _ g f)
 Notation "f >=[ M ]=> g" := (@kleisli_compose _ M _ _ _ f _ g)
 Notation "f <=[ M ]=< g" := (@kleisli_compose _ M _ _ _ g _ f)
+Notation "ret[ M ]" := (@ret _ M _ _)
+Notation "join[ M ]" := (@join _ M _ _)
 
 Corollary monad_id_left `(f : x ~{C}~> M y) : ret <=< f ≈ f.
 Corollary monad_id_right `(f : x ~> M y) : f <=< ret ≈ f.
@@ -326,3 +335,12 @@ Check Hom C ◯ (F ^op ∏⟶ (Id[C])).
 Check Hom D ◯ ((Id[D]) ^op ∏⟶ U).
 Check (F ^op ∏⟶ (Id[C])).
 Check ((Id[D]) ^op ∏⟶ U).
+
+(* TAlgebra *)
+Notation "t_alg[ T ]" := (@t_alg _ _ _ _ T)
+Notation "t_alg_hom[ F ]" := (@t_alg_hom _ _ _ _ _ _ _ F)
+
+Notation "`1 x" := (projT1 x) : category_theory_scope
+Notation "`2 x" := (projT2 x) : category_theory_scope
+
+
