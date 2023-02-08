@@ -342,5 +342,7 @@ Notation "t_alg_hom[ F ]" := (@t_alg_hom _ _ _ _ _ _ _ F)
 
 Notation "`1 x" := (projT1 x) : category_theory_scope
 Notation "`2 x" := (projT2 x) : category_theory_scope
+Notation "`` x" := (@projT1 _ _ x) : category_theory_scope
+
 
 

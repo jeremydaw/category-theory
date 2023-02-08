@@ -173,7 +173,8 @@ Print Implicit join_fmap_join.
 Print Implicit compose_respects.
 Print Category.Theory.Monad.Monad.
 
-(* here are two ways of setting up the same proof *)
+(* here are two ways of setting up the same proof,
+  but the Program Definition is much nicer to print *)
 Lemma Monad_to_3 C M (H : @Monad C M) : @Monad3 C (@fobj _ _ M).
 Proof. apply (Build_Monad3 (fun x => ret)
   (fun x y (f : x ~{ C }~> M y) => join ∘ fmap[M] f)) ; intros.
@@ -288,6 +289,9 @@ split ; symmetry ; assumption. Qed.
 
 Check k_adj.  Check k_adj_obligation_1.
 
+(* TODO - need to show that the monad arising from this adjunction
+  is the same one we started with *)
+
 Print Implicit Compose. (* composition of functors, "F ◯ G" := Compose F G *)
 Print Implicit adjruc.
 Print Implicit adjrucnf.
@@ -296,7 +300,7 @@ Print Implicit adjrucnf.
 Require Category.Monad.Adjunction.
 Check Category.Monad.Adjunction.Adjunction_Monad.
 
-Program Definition Adjunction_OW_to_Monad3 {C D} F U
+Program Definition Adjunction_OW_to_Monad3 {C D F U}
   (H : @Adjunction_OW C D F U) : @Monad3 D (fobj[Compose U F]) :=
   {| ret3 := transform (unitOW F U) ;
      ext := fun x z h => fmap[U] (adjr F U h : F x ~{ C }~> F z) |}.
@@ -378,10 +382,25 @@ Require Import Category.Monad.Eilenberg.Moore.
 Check Category.Monad.Eilenberg.Moore.EilenbergMoore.
 Check @Category.Monad.Eilenberg.Moore.EilenbergMoore.
 Print Category.Monad.Eilenberg.Moore.EilenbergMoore.
+Print Implicit TAlgebra. (* C, H implicit, maximal - weird *)
+Print Implicit EilenbergMoore. (* ditto *)
 
 (* join of a monad M is an M-algebra *)
-Program Definition join_is_alg C M H a : @TAlgebra C M H (fobj[M] a) :=
+Program Definition join_is_alg {C M} H a : @TAlgebra C M H (fobj[M] a) :=
   {| t_alg := join ; t_id := join_ret ; t_action := join_fmap_join |}.
+
+Definition join_is_ex_alg {C M} H a : ∃ y, @TAlgebra C M H y :=
+ existT (@TAlgebra C M H) (fobj[M] a) (join_is_alg H a).
+
+Program Definition join_alg_arr {C M} (H : @Monad C M) x y (arr : @hom C x y) :
+  @TAlgebraHom C M H _ _ (join_is_alg H x) (join_is_alg H y) :=
+  {| t_alg_hom := fmap[M] arr |}.
+Next Obligation. symmetry. apply join_fmap_fmap. Qed.
+
+(* given a T-algebra, there is a T-Algebra arrow from the join algebra to it *)
+Program Definition join_to_alg {C M} H a (alg : @TAlgebra C M H a) :
+  @TAlgebraHom C M H _ _ (join_is_alg H a) alg := {| t_alg_hom := t_alg |}.
+Next Obligation. symmetry. apply t_action. Qed.
 
 (* obtaining the object and arrow from an object of the Eilenberg-Moore
   category (which is an algebra of existential type) *)
@@ -404,7 +423,7 @@ because it is opaque and can't be made transparent; thus we find we need
 Program Definition fun_to_EM C M (H : @Monad C M) : @Functor 
   C (@EilenbergMoore C M H) :=
   {| fobj := fun a => existT (@TAlgebra C M H) 
-    (fobj[M] a) (join_is_alg C M H a) |}.
+    (fobj[M] a) (join_is_alg H a) |}.
     gives error Unable to unify "@TAlgebra C M H" with
  "λ a : obj[C], @TAlgebra C M (Moore.EilenbergMoore_obligation_1 C M H) a".
 
@@ -412,7 +431,7 @@ Set Printing Implicit.
 Unset Printing Implicit.
 *)
 
-Program Definition JEM C T (H : @Monad C T) : Category := {|
+Program Definition JEM {C T} (H : @Monad C T) : Category := {|
   obj     := ∃ a : C, @TAlgebra C T H a;
   hom     := fun x y => TAlgebraHom T ``x ``y (projT2 x) (projT2 y);
   homset  := fun _ _ => {| equiv := fun f g => t_alg_hom[f] ≈ t_alg_hom[g] |};
@@ -425,31 +444,47 @@ Next Obligation.  rewrite fmap_comp.  rewrite comp_assoc.
 
 Print JEM.
 
-Program Definition fun_from_JEM C M (H : @Monad C M) : @Functor 
-  (JEM C M H) C := {| fobj := alg_obj ; fmap := alg_hom |}.
+Check fun C M H a => join_is_ex_alg H a : obj[JEM H].
 
-(* this fails re Setoids
-Program Definition fun_to_JEM C M (H : @Monad C M) : @Functor C (JEM C M H) :=
-  {| fobj := fun a => existT (@TAlgebra C M H) (fobj[M] a)
-    (join_is_alg C M H a) |}.
-  try to sort it out using Build_Functor with arguments
-  *)
+(* functors to and from Eilenberg-Moore category *)
+Program Definition fun_from_JEM {C M} (H : @Monad C M) : @Functor 
+  (JEM H) C := {| fobj := alg_obj ; fmap := alg_hom |}.
 
-Lemma fun_to_JEM C M (H : @Monad C M) : @Functor C (JEM C M H).
-Check fun a => (existT (@TAlgebra C M H) (fobj[M] a) (join_is_alg C M H a) :
-  obj[JEM C M H]) : ∃ y, @TAlgebra C M H y.
-assert ((∃ y, @TAlgebra C M H y) = obj[JEM C M H]).
-- simpl. reflexivity. 
-(* above works, but with EilenbergMoore fails with Unable to unify
-"∃ a : obj[C], @TAlgebra C M (Moore.EilenbergMoore_obligation_1 C M H) a"
-with "∃ y : obj[C], @TAlgebra C M H y". *)
-- 
-eapply (Build_Functor C (JEM C M H)).
-eapply (Build_Functor C (JEM C M H) 
-  (fun a => existT (@TAlgebra C M H) (fobj[M] a) (join_is_alg C M H a))
-  (* next figure out the definition for fmap *)
-    ).
-Abort.
+Program Definition fun_to_JEM {C M} (H : @Monad C M) : @Functor C (JEM H) :=
+  {| fobj := join_is_ex_alg H ; fmap := join_alg_arr H |}.
+Next Obligation. proper. apply fmap_respects. exact X. Qed.
+Next Obligation. apply fmap_comp. Qed.
+
+(* now to show these functors are adjoint *)
+Program Definition adj_EM {C M} (H : @Monad C M) : 
+  Adjunction_IffEq (fun_to_JEM H) (fun_from_JEM H) :=
+  {| unit' := @ret C M H ;
+    counit' := fun alg => join_to_alg H (projT1 alg) (projT2 alg) |}.
+Next Obligation. unfold alg_hom. split ; intro ; rewrite <- X0.
+- rewrite fmap_comp, comp_assoc.
+  rewrite <- (@t_alg_hom_commutes _ _ _ _ _ _ _ f).  simpl.
+  rewrite <- comp_assoc.  rewrite join_fmap_ret. apply id_right.
+- rewrite <- comp_assoc.  rewrite <- fmap_ret.
+  rewrite comp_assoc.  rewrite t_id.  apply id_left. Qed.
+
+(* TODO - need to show that the monad arising from this adjunction
+  is the same one we started with *)
+
+(* Eilenberg-Moore category final among ways of factoring a monad
+  as an adjoint pair of functors *)
+(* given an adjunction, natural choice of algebra *) 
+(*
+Program Definition Adjunction_IffEq_to_alg {C D F U} 
+  (H : @Adjunction_IffEq C D F U) (c : obj[C]) :
+  @TAlgebra D _ (Monad_from_3 (Adjunction_IffEq_to_Monad3 H)) (fobj[U] c).
+  the map is U (counit)
+
+Program Definition Adjunction_IffEq_to_fun_to_EM {C D F U} 
+  (H : @Adjunction_IffEq C D F U) :
+  @Functor C (JEM (Monad_from_3 (Adjunction_IffEq_to_Monad3 H))) :=
+  {| fobj := fobj[F] ;
+    fmap := fun x z (g : x ~{ D }~> U (F z)) => counit' H _ ∘ fmap[F] g |}.
+*)
 
 Print Implicit naturality.
 Print Implicit Kleisli_from_3.
