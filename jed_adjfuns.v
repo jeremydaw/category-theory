@@ -106,29 +106,25 @@ Lemma AIE_counit_fmap_unit (H : Adjunction_IffEq) d :
   counit' ∘ fmap[F] unit' ≈ @id C (fobj[F] d).
 Proof. rewrite <- iffeq, fmap_id. apply id_left. Qed.
 
-(* tried to get rid of this but problems at first obligations of
-  Program Definition Adjunction_IffEq_to_Hom *)
-Section AdjunctionIffEq.
-Context {H : Adjunction_IffEq}.
+Lemma AIE_counit_nt (H : Adjunction_IffEq) c c' f :
+  @counit' H c' ∘ fmap[F] (fmap[U] f) ≈ f ∘ @counit' H c.
+Proof. rewrite <- iffeq, fmap_comp, <- comp_assoc.
+rewrite AIE_fmap_counit_unit. apply id_right.  Qed.
 
-Program Definition iff_unit : Id ⟹ U ◯ F := {| transform := @unit' H |}.
-Next Obligation.  apply (@iffeq H).
-(* note: destruct H. regards the unit' of H as different, must use @iffeq H *)
-rewrite fmap_comp, comp_assoc.
-pose (@iffeq H y _ id unit'). 
-pose (fst i).  require e.
-- rewrite fmap_id, id_left.  reflexivity.
-- rewrite e, id_left. reflexivity. Qed.
-Next Obligation.  symmetry.  apply iff_unit_obligation_1. Qed.
+Lemma AIE_unit_nt (H : Adjunction_IffEq) d d' g :
+  fmap[U] (fmap[F] g) ∘ @unit' H d ≈ @unit' H d' ∘ g.
+Proof. rewrite iffeq, fmap_comp, comp_assoc.
+rewrite AIE_counit_fmap_unit. apply id_left.  Qed.
 
-Program Definition iff_counit : F ◯ U ⟹  Id := {| transform := @counit' H |}.
-Next Obligation.  symmetry.  apply (@iffeq H).
-rewrite fmap_comp, <- comp_assoc.
-pose (@iffeq H _ x counit' id). 
-pose (snd i).  require e.
-- rewrite fmap_id, id_right.  reflexivity.
-- rewrite e, id_right. reflexivity. Qed.
-Next Obligation.  symmetry.  apply iff_counit_obligation_1. Qed.
+Program Definition iff_unit (H : Adjunction_IffEq) : Id ⟹ U ◯ F :=
+  {| transform := @unit' H |}.
+Next Obligation.  apply (@AIE_unit_nt H). Qed.
+Next Obligation.  symmetry. apply (@AIE_unit_nt H). Qed.
+
+Program Definition iff_counit (H : Adjunction_IffEq) : F ◯ U ⟹  Id := 
+  {| transform := @counit' H |}.
+Next Obligation.  symmetry.  apply (@AIE_counit_nt H). Qed.
+Next Obligation.  apply (@AIE_counit_nt H). Qed.
 
 Check iff_unit_obligation_1.
 Print Implicit iff_counit.
@@ -142,28 +138,27 @@ Check @Category.Theory.Natural.Transformation.transform.
 Check Category.Theory.Isomorphism.Isomorphism.
 Check @Category.Theory.Isomorphism.to.
 
-Program Definition Adjunction_IffEq_to_Hom : Adjunction_Hom F U := {|
+Program Definition Adjunction_IffEq_to_Hom
+  (H : Adjunction_IffEq) : Adjunction_Hom F U := {|
   hom_adj :=
     {| to := {| transform := fun _ =>
-        {| morphism := fun f => fmap[U] f ∘ iff_unit _ |} |} ;
+        {| morphism := fun f => fmap[U] f ∘ @unit' H _ |} |} ;
      from := {| transform := fun _ =>
-        {| morphism := fun f => iff_counit _ ∘ fmap[F] f |} |} |} |}.
+        {| morphism := fun f => @counit' H _ ∘ fmap[F] f |} |} |} |}.
 Next Obligation.  proper. rewrite X. reflexivity. Qed.
 Next Obligation.  rewrite !fmap_comp.  rewrite !comp_assoc_sym.
-rewrite <- (naturality_sym iff_unit _ _ h).  reflexivity. Qed.
+rewrite AIE_unit_nt.  reflexivity. Qed.
 Next Obligation.  rewrite !fmap_comp.  rewrite !comp_assoc_sym.
-rewrite <- (naturality_sym iff_unit _ _ h).  reflexivity. Qed.
+rewrite AIE_unit_nt.  reflexivity. Qed.
 Next Obligation.  proper. rewrite X. reflexivity. Qed.
 Next Obligation.  rewrite !fmap_comp.  rewrite !comp_assoc.
-rewrite (naturality_sym iff_counit _ _ h0).  reflexivity. Qed.
+rewrite AIE_counit_nt.  reflexivity. Qed.
 Next Obligation.  rewrite !fmap_comp.  rewrite !comp_assoc.
-rewrite (naturality_sym iff_counit _ _ h0).  reflexivity. Qed.
+rewrite AIE_counit_nt.  reflexivity. Qed.
 Next Obligation.  rewrite fmap_id, id_left, id_right.
 rewrite iffeq. reflexivity. Qed.
 Next Obligation.  rewrite fmap_id, id_left, id_right.
 rewrite <- iffeq. reflexivity. Qed.
-
-End AdjunctionIffEq. (* was later *)
 
 (* Lemma or Program Definition - seems to make no difference *)
 Lemma Adjunction_IffEq_to_OW (H : Adjunction_IffEq) : Adjunction_OW.
@@ -171,7 +166,8 @@ Proof.  exact (Build_Adjunction_OW (@iff_unit H) _ (@iffeq H)). Qed.
 
 Lemma Adjunction_IffEq_to_Transform (H : Adjunction_IffEq) : F ∹ U.
 Proof. pose (@iffeq H).
-apply (Build_Adjunction_Transform iff_unit iff_counit) ; intro ; apply i.
+apply (Build_Adjunction_Transform (iff_unit H) (iff_counit H)) ;
+  intro ; apply i.
 (* problem?, that iff_unit is nt, unit' is function, but there is a coercion *)
 - rewrite fmap_id, id_left.  reflexivity.
 - rewrite fmap_id, id_right.  reflexivity.
@@ -197,11 +193,11 @@ Print Implicit naturality.
 Program Definition Adjunction_IffEq_to_Universal (H : Adjunction_IffEq) :
   F ⊣ U := {| adj := iff_adj H |}.
 Next Obligation.  rewrite fmap_comp.  rewrite <- !comp_assoc.
-pose (naturality iff_unit _ _ g).  rewrite e. simpl. reflexivity. Qed.
+  rewrite AIE_unit_nt. reflexivity. Qed.
 Next Obligation.  rewrite fmap_comp.  apply comp_assoc_sym. Qed.
 Next Obligation.  rewrite fmap_comp.  apply comp_assoc. Qed.
 Next Obligation.  rewrite fmap_comp.  rewrite !comp_assoc.
-pose (naturality_sym iff_counit _ _ f).  rewrite e. simpl. reflexivity. Qed.
+  rewrite AIE_counit_nt. reflexivity. Qed.
 
 Check Category.Adjunction.Hom.hom_unit.
 Check Category.Adjunction.Hom.hom_adj.
@@ -316,13 +312,14 @@ Definition apI W f (x : W) (X : f x) := X : ap Type W f x.
 Definition apD W f (x : W) (X : ap Type W f x) := X : f x.
 *)
 
+End CDFU.
 (* note here how only two of the four conditions in the
   definition of Adjunction are used, this is because
   to_adj_nat_l and from_adj_nat_l say the same thing, likewise
   to_adj_nat_r and from_adj_nat_r (given that adj is an isormorphism)
   *)
-Program Definition Adjunction_Universal_to_IffEq (A : F ⊣ U)
-  : Adjunction_IffEq := {|
+Program Definition Adjunction_Universal_to_IffEq {C D F U} (A : F ⊣ U)
+  : @Adjunction_IffEq C D F U := {|
     unit' := fun x => to adj id ;
     counit' := fun y => from adj id
     |}.
@@ -346,8 +343,8 @@ Print Implicit to_adj_nat_l.
 *)
 
 (*
-*)
 End CDFU.
+*)
 
 Arguments Adjunction_IffEq {C D} F%functor U%functor.
 Arguments Adjunction_IffEq_to_Universal {C D F%functor U%functor}.
@@ -554,8 +551,7 @@ Print Adjunction_IffEq_comp.
 Set Printing Implicit. 
 Unset Printing Implicit. 
 *)
-(* TODO move earlier when remove Section CDFU,
-  and use them in proof of iff_unit and iff_counit *)
+(* now earlier
 Lemma AIE_counit_nt {C D F U} (H : @Adjunction_IffEq C D F U) c c' f :
   counit' H c' ∘ fmap[F] (fmap[U] f) ≈ f ∘ counit' H c.
 Proof. rewrite <- iffeq, fmap_comp, <- comp_assoc.
@@ -563,19 +559,6 @@ rewrite AIE_fmap_counit_unit. apply id_right.  Qed.
 
 Lemma AIE_unit_nt {C D F U} (H : @Adjunction_IffEq C D F U) d d' g :
   fmap[U] (fmap[F] g) ∘ unit' H d ≈ unit' H d' ∘ g.
-Proof. rewrite iffeq, fmap_comp, comp_assoc.
-rewrite AIE_counit_fmap_unit. apply id_left.  Qed.
-
-(* these implied by the above 
-Lemma AIE_counit_fmap_counit {C D F U} (H : @Adjunction_IffEq C D F U) c :
-  (counit' H c) ∘ (fmap[F] (fmap[U] (counit' H c)))
-  ≈ (counit' H c) ∘ (counit' H (fobj[F] (fobj[U] c))).
-Proof. rewrite <- iffeq, fmap_comp, <- comp_assoc.
-rewrite AIE_fmap_counit_unit. apply id_right.  Qed.
-
-Lemma AIE_unit_fmap_unit {C D F U} (H : @Adjunction_IffEq C D F U) d :
-  (fmap[U] (fmap[F] (unit' H d))) ∘ (unit' H d)
-  ≈ (unit' H (fobj[U] (fobj[F] d))) ∘ (unit' H d).
 Proof. rewrite iffeq, fmap_comp, comp_assoc.
 rewrite AIE_counit_fmap_unit. apply id_left.  Qed.
 *)

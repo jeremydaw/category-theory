@@ -300,6 +300,10 @@ Print Implicit adjrucnf.
 Require Category.Monad.Adjunction.
 Check Category.Monad.Adjunction.Adjunction_Monad.
 
+Lemma AOW_adjr_unit_id {C D F U} (H : @Adjunction_OW C D F U) d :
+  adjr F U (transform (unitOW F U) d) ≈ id{C}.
+Proof. apply adjruc. simpl.  rewrite fmap_id. apply id_left. Qed.
+  
 Program Definition Adjunction_OW_to_Monad3 {C D F U}
   (H : @Adjunction_OW C D F U) : @Monad3 D (fobj[Compose U F]) :=
   {| ret3 := transform (unitOW F U) ;
@@ -308,17 +312,8 @@ Next Obligation. proper. apply fmap_respects.
 apply adjruc. rewrite X. apply adjruc. reflexivity. Qed.
 Next Obligation.  apply adjruc. reflexivity. Qed.
 
-Next Obligation. (* Coq misbehaves here *)
-Check adjr.  Check unitOW.  Check adjruc. (* give ∀ (F U : D ⟶ D) ... *)
-(* goal is fmap[U] (adjr _ _ (unitOW _ _ x)) ≈ id{D}
-  so wanted to assert (adjr _ _ (unitOW _ _ x) ≈ id{C}) but fails *)
-(* assert (adjr _ _ (@unitOW C D F U H x) ≈ id{C}). this also fails *)
-(* this works, but we use alternative approach below 
-assert (@adjr C D F U H x (F x) (unitOW _ _ x) ≈ id{C}).
-{ apply adjruc.  rewrite fmap_id. apply id_left. }
-rewrite X.  apply fmap_id. *)
-etransitivity. 2: apply fmap_id.
-apply fmap_respects.  apply adjruc.  rewrite fmap_id. apply id_left. Qed.
+(* rewrite AOW_adjr_unit_id fails - wny?  but next succeeds *)
+Next Obligation.  rewrite (AOW_adjr_unit_id H x). apply fmap_id. Qed.
  
 Next Obligation.
 Check adjr.  Check unitOW.  Check adjruc. (* give ∀ (F U : D ⟶ D) ... *)
@@ -336,9 +331,8 @@ Next Obligation. proper. apply fmap_respects. rewrite X. reflexivity. Qed.
 Next Obligation.  apply iffeq.  reflexivity. Qed.
 Next Obligation. rewrite AIE_counit_fmap_unit.  apply fmap_id. Qed.
 Next Obligation.  rewrite <- fmap_comp. apply fmap_respects. 
-symmetry. apply iffeq.
-rewrite fmap_comp.  rewrite <- comp_assoc.
-apply comp_o_l. apply iffeq. reflexivity. Qed.
+rewrite (@fmap_comp _ _ F). rewrite !comp_assoc.
+rewrite AIE_counit_nt.  reflexivity. Qed.
 
 Check Adjunction_OW_to_Monad3.  Check AIE_to_Monad3.
 Check AIE_to_Monad3_obligation_2.
@@ -493,12 +487,8 @@ Next Obligation. rewrite (iffeq H), fmap_id, id_right. reflexivity. Qed.
 Next Obligation.  rewrite fmap_id, id_right.
 rewrite (@fmap_comp _ _ F).  rewrite comp_assoc, fmap_comp.
 rewrite AIE_to_Monad3_obligation_3.  rewrite id_left.
-(* this is rather like join_fmap_join of Monad
-but for any object of C, not necessarily of the form fobj[F] z *)
-rewrite <- !fmap_comp.  apply fmap_respects.  rewrite <- (iffeq H).
-rewrite fmap_comp, <- comp_assoc.
-etransitivity.  2: apply id_right.  apply comp_o_l.
-rewrite (iffeq H).  rewrite fmap_id.  apply id_right. Qed.
+rewrite <- !fmap_comp.  apply fmap_respects.
+apply AIE_counit_nt. Qed.
 
 Program Definition AIE_to_fun_to_EM {C D F U} (H : @Adjunction_IffEq C D F U) :
   @Functor C (JEM (Monad_from_3 (AIE_to_Monad3 H))) :=
