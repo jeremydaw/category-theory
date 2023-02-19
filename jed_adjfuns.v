@@ -98,6 +98,16 @@ Class Adjunction_IffEq := {
     iffT (fmap[U] f ∘ unit' ≈ g) (counit' ∘ fmap[F] g ≈ f)
   }.
 
+Lemma AIE_fmap_counit_unit (H : Adjunction_IffEq) c :
+  fmap[U] counit' ∘ unit' ≈ @id D (fobj[U] c).
+Proof. rewrite iffeq, fmap_id. apply id_right. Qed.
+
+Lemma AIE_counit_fmap_unit (H : Adjunction_IffEq) d :
+  counit' ∘ fmap[F] unit' ≈ @id C (fobj[F] d).
+Proof. rewrite <- iffeq, fmap_id. apply id_left. Qed.
+
+(* tried to get rid of this but problems at first obligations of
+  Program Definition Adjunction_IffEq_to_Hom *)
 Section AdjunctionIffEq.
 Context {H : Adjunction_IffEq}.
 
@@ -120,6 +130,7 @@ pose (snd i).  require e.
 - rewrite e, id_right. reflexivity. Qed.
 Next Obligation.  symmetry.  apply iff_counit_obligation_1. Qed.
 
+Check iff_unit_obligation_1.
 Print Implicit iff_counit.
 Print Implicit Adjunction_OW.
 Print Implicit Adjunction_Transform.
@@ -543,3 +554,29 @@ Print Adjunction_IffEq_comp.
 Set Printing Implicit. 
 Unset Printing Implicit. 
 *)
+(* TODO move earlier when remove Section CDFU,
+  and use them in proof of iff_unit and iff_counit *)
+Lemma AIE_counit_nt {C D F U} (H : @Adjunction_IffEq C D F U) c c' f :
+  counit' H c' ∘ fmap[F] (fmap[U] f) ≈ f ∘ counit' H c.
+Proof. rewrite <- iffeq, fmap_comp, <- comp_assoc.
+rewrite AIE_fmap_counit_unit. apply id_right.  Qed.
+
+Lemma AIE_unit_nt {C D F U} (H : @Adjunction_IffEq C D F U) d d' g :
+  fmap[U] (fmap[F] g) ∘ unit' H d ≈ unit' H d' ∘ g.
+Proof. rewrite iffeq, fmap_comp, comp_assoc.
+rewrite AIE_counit_fmap_unit. apply id_left.  Qed.
+
+(* these implied by the above 
+Lemma AIE_counit_fmap_counit {C D F U} (H : @Adjunction_IffEq C D F U) c :
+  (counit' H c) ∘ (fmap[F] (fmap[U] (counit' H c)))
+  ≈ (counit' H c) ∘ (counit' H (fobj[F] (fobj[U] c))).
+Proof. rewrite <- iffeq, fmap_comp, <- comp_assoc.
+rewrite AIE_fmap_counit_unit. apply id_right.  Qed.
+
+Lemma AIE_unit_fmap_unit {C D F U} (H : @Adjunction_IffEq C D F U) d :
+  (fmap[U] (fmap[F] (unit' H d))) ∘ (unit' H d)
+  ≈ (unit' H (fobj[U] (fobj[F] d))) ∘ (unit' H d).
+Proof. rewrite iffeq, fmap_comp, comp_assoc.
+rewrite AIE_counit_fmap_unit. apply id_left.  Qed.
+*)
+

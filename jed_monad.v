@@ -175,7 +175,7 @@ Print Category.Theory.Monad.Monad.
 
 (* here are two ways of setting up the same proof,
   but the Program Definition is much nicer to print *)
-Lemma Monad_to_3 C M (H : @Monad C M) : @Monad3 C (@fobj _ _ M).
+Lemma Monad_to_3 {C M} (H : @Monad C M) : @Monad3 C (@fobj _ _ M).
 Proof. apply (Build_Monad3 (fun x => ret)
   (fun x y (f : x ~{ C }~> M y) => join ∘ fmap[M] f)) ; intros.
 - proper. rewrite X. reflexivity. 
@@ -187,7 +187,7 @@ rewrite !comp_assoc.  rewrite join_fmap_join.
 apply comp_o_r.  rewrite <- !comp_assoc.
 rewrite join_fmap_fmap.  reflexivity. Qed.
 
-Program Definition Monad3_from_Monad C M (H : @Monad C M) : @Monad3 C fobj := 
+Program Definition Monad3_from_Monad {C M} (H : @Monad C M) : @Monad3 C fobj := 
   {| ret3 := fun x => ret ;
     ext := fun x y (f : x ~{ C }~> M y) => join ∘ fmap[M] f |}.
 Next Obligation. proper. rewrite X. reflexivity. Qed.
@@ -328,32 +328,44 @@ rewrite fmap_comp.  rewrite <- comp_assoc.
 apply comp_o_l. apply adjruc. reflexivity. Qed.
 
 (* this proof very similar to Adjunction_OW_to_Monad3 *)
-Program Definition Adjunction_IffEq_to_Monad3 {C D F U}
+Program Definition AIE_to_Monad3 {C D F U}
   (H : @Adjunction_IffEq C D F U) : @Monad3 D (fobj[Compose U F]) :=
   {| ret3 := unit' H ;
-    ext := fun x z h => fmap[U] ((counit' H _ ∘ fmap[F] h)) |}.
+    ext := fun x z h => fmap[U] (counit' H _ ∘ fmap[F] h) |}.
 Next Obligation. proper. apply fmap_respects. rewrite X. reflexivity. Qed.
-Next Obligation. apply iffeq.  reflexivity. Qed.
-Next Obligation.  etransitivity. 2: apply fmap_id.
-apply fmap_respects. apply iffeq. rewrite fmap_id. apply id_left. Qed.
+Next Obligation.  apply iffeq.  reflexivity. Qed.
+Next Obligation. rewrite AIE_counit_fmap_unit.  apply fmap_id. Qed.
 Next Obligation.  rewrite <- fmap_comp. apply fmap_respects. 
 symmetry. apply iffeq.
 rewrite fmap_comp.  rewrite <- comp_assoc.
 apply comp_o_l. apply iffeq. reflexivity. Qed.
 
-Check Adjunction_OW_to_Monad3.  Check Adjunction_IffEq_to_Monad3.
-Check Adjunction_IffEq_to_Monad3_obligation_2.
-Check Adjunction_IffEq_to_Monad3_obligation_3.
-Check Adjunction_IffEq_to_Monad3_obligation_4.
+Check Adjunction_OW_to_Monad3.  Check AIE_to_Monad3.
+Check AIE_to_Monad3_obligation_2.
+Check AIE_to_Monad3_obligation_3.
+Check AIE_to_Monad3_obligation_4.
+
+(* try separate proof for Monad *)
+Program Definition AIE_to_Monad {C D F U}
+  (H : @Adjunction_IffEq C D F U) : @Monad D (Compose U F) :=
+  {| ret := unit' H ; join := fun x => fmap[U] (counit' H _) |}.
+Next Obligation. symmetry. apply AIE_unit_nt. Qed.
+Next Obligation. rewrite <- !fmap_comp. apply fmap_respects.
+  apply AIE_counit_nt. Qed.
+Next Obligation. rewrite <- fmap_comp. rewrite AIE_counit_fmap_unit.
+  apply fmap_id. Qed.
+Next Obligation. apply AIE_fmap_counit_unit. Qed.
+Next Obligation. rewrite <- !fmap_comp. apply fmap_respects. 
+  apply AIE_counit_nt. Qed.
 
 (* functor to/from Kleisli cat of adjunction, see Barr & Wells 
 Toposes, Triples and Theories ch 3, s2.3 
 "In fact, [the Kleisli category] is initial and [The Eilenberg-Moore category]
 is ﬁnal among all ways of factoring [a monad] as an adjoint pair." *)
 
-Program Definition Adjunction_IffEq_to_rel_fun {C D F U} 
+Program Definition AIE_to_rel_fun {C D F U} 
   (H : @Adjunction_IffEq C D F U) :
-  @Functor (Kleisli_from_3 (Adjunction_IffEq_to_Monad3 H)) C :=
+  @Functor (Kleisli_from_3 (AIE_to_Monad3 H)) C :=
   {| fobj := fobj[F] ;
     fmap := fun x z (g : x ~{ D }~> U (F z)) => counit' H _ ∘ fmap[F] g |}.
 Next Obligation. proper. rewrite X. reflexivity. Qed.
@@ -362,15 +374,15 @@ Next Obligation. apply iffeq. rewrite fmap_comp. rewrite <- comp_assoc.
   apply comp_o_l. apply iffeq. reflexivity. Qed.
 
 Lemma AIE_rf_comp_F {C D F U} (H : @Adjunction_IffEq C D F U) :
-  Compose (Adjunction_IffEq_to_rel_fun H)  
-  (ret_o_functor (Adjunction_IffEq_to_Monad3 H)) ≈ F.
+  Compose (AIE_to_rel_fun H)  
+  (ret_o_functor (AIE_to_Monad3 H)) ≈ F.
 Proof. simpl.  exists (fun x => (@iso_id _ (F x))). simpl.
 intros. apply iffeq.  rewrite id_left.  rewrite id_right.
 apply (@naturality _ _ _ _ (iff_unit H)). Qed.
 
 Lemma AIE_rf_comp_U {C D F U} (H : @Adjunction_IffEq C D F U) :
-  Compose U (Adjunction_IffEq_to_rel_fun H) ≈ 
-    (ext_functor (Adjunction_IffEq_to_Monad3 H)).
+  Compose U (AIE_to_rel_fun H) ≈ 
+    (ext_functor (AIE_to_Monad3 H)).
 Proof. simpl.  exists (fun x => (@iso_id _ (U (F x)))). simpl.
 intros.  rewrite id_left.  rewrite id_right. reflexivity. Qed.
 
@@ -473,19 +485,63 @@ Next Obligation. unfold alg_hom. split ; intro ; rewrite <- X0.
 (* Eilenberg-Moore category final among ways of factoring a monad
   as an adjoint pair of functors *)
 (* given an adjunction, natural choice of algebra *) 
-(*
-Program Definition Adjunction_IffEq_to_alg {C D F U} 
+Program Definition AIE_to_alg {C D F U} 
   (H : @Adjunction_IffEq C D F U) (c : obj[C]) :
-  @TAlgebra D _ (Monad_from_3 (Adjunction_IffEq_to_Monad3 H)) (fobj[U] c).
-  the map is U (counit)
+  @TAlgebra D _ (Monad_from_3 (AIE_to_Monad3 H)) (fobj[U] c) :=
+  {| t_alg := fmap[U] (counit' H c) |}.
+Next Obligation. rewrite (iffeq H), fmap_id, id_right. reflexivity. Qed.
+Next Obligation.  rewrite fmap_id, id_right.
+rewrite (@fmap_comp _ _ F).  rewrite comp_assoc, fmap_comp.
+rewrite AIE_to_Monad3_obligation_3.  rewrite id_left.
+(* this is rather like join_fmap_join of Monad
+but for any object of C, not necessarily of the form fobj[F] z *)
+rewrite <- !fmap_comp.  apply fmap_respects.  rewrite <- (iffeq H).
+rewrite fmap_comp, <- comp_assoc.
+etransitivity.  2: apply id_right.  apply comp_o_l.
+rewrite (iffeq H).  rewrite fmap_id.  apply id_right. Qed.
 
-Program Definition Adjunction_IffEq_to_fun_to_EM {C D F U} 
-  (H : @Adjunction_IffEq C D F U) :
-  @Functor C (JEM (Monad_from_3 (Adjunction_IffEq_to_Monad3 H))) :=
-  {| fobj := fobj[F] ;
-    fmap := fun x z (g : x ~{ D }~> U (F z)) => counit' H _ ∘ fmap[F] g |}.
+Program Definition AIE_to_fun_to_EM {C D F U} (H : @Adjunction_IffEq C D F U) :
+  @Functor C (JEM (Monad_from_3 (AIE_to_Monad3 H))) :=
+  {| fobj := fun c => existT _ (fobj[U] c) (AIE_to_alg H c) ;
+    fmap := fun c c' f => {| t_alg_hom := fmap[U] f |} |}.
+Next Obligation.  rewrite (@fmap_comp _ _ F). rewrite comp_assoc, fmap_comp.
+rewrite AIE_to_Monad3_obligation_3.  rewrite id_left.
+rewrite <- !fmap_comp.  apply fmap_respects.
+symmetry. apply AIE_counit_nt. Qed.
+Next Obligation. proper. rewrite X. reflexivity. Qed.
+Next Obligation. apply fmap_comp. Qed.
+
+(*
+to do this requires changing AIE_to_fun_to_EM
+which requires changing AIE_to_alg
+or proving more equivalences 
+Lemma AIE_F_EM_comp {C D F U} (H : @Adjunction_IffEq C D F U) :
+  Compose (AIE_to_fun_to_EM H) F ≈ 
+  fun_to_JEM (AIE_to_Monad H).
+Proof. simpl.  exists (fun x => (@iso_id _ _)). simpl.
+
+Lemma AIE_F_EM_comp {C D F U} (H : @Adjunction_IffEq C D F U) :
+  Compose (AIE_to_fun_to_EM H) F ≈ 
+  fun_to_JEM (Monad_from_3 (AIE_to_Monad3 H)).
+Proof. simpl.  exists (fun x => (@iso_id _ _)). simpl.
+what should iso be, iso x is an isomorphism of two things of type
+∃ y : obj[D], TAlgebra (Functor_from_3 (AIE_to_Monad3 H)) y
+whereas @iso_id : ∀ (C : Category) (x : obj[C]), x ≅ x
+
+iso_id should work, except that unfolding types hits the problem
+that Functor_from_3_obligation_.. is opaque
+
+intros.  rewrite id_left.  rewrite id_right. reflexivity. Qed.
+
+Lemma AIE_EM_comp_U {C D F U} (H : @Adjunction_IffEq C D F U) :
+  Compose (fun_from_JEM (Monad_from_3 (AIE_to_Monad3 H)))
+  (AIE_to_fun_to_EM H) ≈ U. 
+Proof. simpl.  exists (fun x => (@iso_id _ (U (F x)))). simpl.
+  .
 *)
 
+Print TAlgebra.
+Print TAlgebraHom.
 Print Implicit naturality.
 Print Implicit Kleisli_from_3.
 Print Implicit ret_o_functor.
@@ -497,7 +553,7 @@ Print Category.Theory.Functor.Functor.
 Print Implicit Functor.
 Print Adjunction_IffEq.
 Print Implicit Kleisli_from_3.  
-Print Implicit Adjunction_IffEq_to_Monad3.  
+Print Implicit AIE_to_Monad3.  
 
 (* compound monad, monad in Kleisli category of another monad *)
 (* this is the basis of the prod construction of Jones & Duponcheel *)
@@ -529,8 +585,8 @@ Print Implicit m_assoc.
 Print Implicit k_adj.
 Print Implicit Adjunction_IffEq_comp.
 Print Monad3.
-Print Implicit Adjunction_IffEq_to_Monad3.
-Check Adjunction_IffEq_to_Monad3.
+Print Implicit AIE_to_Monad3.
+Check AIE_to_Monad3.
 
 (* we can prove JD_Pext using Adjunction_IffEq_comp, as
   both monads give rise to adjunctions (using Kleisli categories),
@@ -539,7 +595,7 @@ Check Adjunction_IffEq_to_Monad3.
 Lemma JD_Pext_adj {C M} (H : @Monad3 C M) {N} 
   (J : @Monad3 (@Kleisli_from_3 C M H) N) : @Monad3 C (Basics.compose M N).
 Proof.  pose (Adjunction_IffEq_comp (k_adj J) (k_adj H)).
-exact (Adjunction_IffEq_to_Monad3 a). Defined.
+exact (AIE_to_Monad3 a). Defined.
 Check JD_Pext_adj.
 
 (* this shows the type of ext, not how it is defined *)

@@ -271,9 +271,9 @@ Toposes, Triples and Theories ch 3, s2.3
 "In fact, [the Kleisli category] is initial and [The Eilenberg-Moore category]
 is ﬁnal among all ways of factoring [a monad] as an adjoint pair." *)
 
-Program Definition Adjunction_IffEq_to_rel_fun {C D F U} 
+Program Definition AIE_to_rel_fun {C D F U} 
   (H : @Adjunction_IffEq C D F U) :
-  @Functor (Kleisli_from_3 (Adjunction_IffEq_to_Monad3 H)) C :=
+  @Functor (Kleisli_from_3 (AIE_to_Monad3 H)) C :=
   {| fobj := fobj[F] ;
     fmap := fun x z (g : x ~{ D }~> U (F z)) => counit' H _ ∘ fmap[F] g |}.
 Next Obligation. proper. rewrite X. reflexivity. Qed.
@@ -282,15 +282,15 @@ Next Obligation. apply iffeq. rewrite fmap_comp. rewrite <- comp_assoc.
   apply comp_o_l. apply iffeq. reflexivity. Qed.
 
 Lemma AIE_rf_comp_F {C D F U} (H : @Adjunction_IffEq C D F U) :
-  Compose (Adjunction_IffEq_to_rel_fun H)  
-  (ret_o_functor (Adjunction_IffEq_to_Monad3 H)) ≈ F.
+  Compose (AIE_to_rel_fun H)  
+  (ret_o_functor (AIE_to_Monad3 H)) ≈ F.
 Proof. simpl.  exists (fun x => (@iso_id _ (F x))). simpl.
 intros. apply iffeq.  rewrite id_left.  rewrite id_right.
 apply (@naturality _ _ _ _ (iff_unit H)). Qed.
 
 Lemma AIE_rf_comp_U {C D F U} (H : @Adjunction_IffEq C D F U) :
-  Compose U (Adjunction_IffEq_to_rel_fun H) ≈ 
-    (ext_functor (Adjunction_IffEq_to_Monad3 H)).
+  Compose U (AIE_to_rel_fun H) ≈ 
+    (ext_functor (AIE_to_Monad3 H)).
 Proof. simpl.  exists (fun x => (@iso_id _ (U (F x)))). simpl.
 intros.  rewrite id_left.  rewrite id_right. reflexivity. Qed.
 
@@ -305,7 +305,7 @@ Print Functor.
 Print Implicit Functor.
 Print Adjunction_IffEq.
 Print Implicit Kleisli_from_3.  
-Print Implicit Adjunction_IffEq_to_Monad3.  
+Print Implicit AIE_to_Monad3.  
 
 (* compound monad, monad in Kleisli category of another monad *)
 (* this is the basis of the prod construction of Jones & Duponcheel *)
@@ -337,8 +337,8 @@ Print Implicit m_assoc.
 Print Implicit k_adj.
 Print Implicit Adjunction_IffEq_comp.
 Print Monad3.
-Print Implicit Adjunction_IffEq_to_Monad3.
-Check Adjunction_IffEq_to_Monad3.
+Print Implicit AIE_to_Monad3.
+Check AIE_to_Monad3.
 
 (* we can prove JD_Pext using Adjunction_IffEq_comp, as
   both monads give rise to adjunctions (using Kleisli categories),
@@ -347,7 +347,7 @@ Check Adjunction_IffEq_to_Monad3.
 Lemma JD_Pext_adj {C M} (H : @Monad3 C M) {N} 
   (J : @Monad3 (@Kleisli_from_3 C M H) N) : @Monad3 C (Basics.compose M N).
 Proof.  pose (Adjunction_IffEq_comp (k_adj J) (k_adj H)).
-exact (Adjunction_IffEq_to_Monad3 a). Defined.
+exact (AIE_to_Monad3 a). Defined.
 Check JD_Pext_adj.
 
 (* this shows the type of ext, not how it is defined *)
