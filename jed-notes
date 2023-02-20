@@ -49,79 +49,6 @@ Set Printing Implicit.
 Unset Printing Coercions.
 Unset Printing Implicit. 
 
-(** setoids - note, two variants, one using Prop, one using Type
-  (ditto relations, Equivalence, etc) **)
-Require Import Coq.Setoids.Setoid.
-Print Module Coq.Setoids.Setoid.
-Coq.Relations.Relation_Definitions.relation = fun A : Type => A -> A -> Prop
-Coq.Classes.CRelationClasses.crelation = fun A : Type => A -> A -> Type
-Print Coq.Setoids.Setoid.Setoid_Theory.
-Print Coq.Setoids.Setoid.Build_Setoid_Theory.
-Print Coq.Classes.RelationClasses.Equivalence.
-Print Coq.Classes.CRelationClasses.Equivalence.
-Check Coq.Classes.RelationClasses.Build_Equivalence.
-Check Coq.Classes.CRelationClasses.Build_Equivalence.
-
-Require Import Coq.Classes.SetoidClass.
-Print Module Coq.Classes.SetoidClass.
-Print Coq.Classes.SetoidClass.Setoid.
-Check Coq.Classes.SetoidClass.Build_Setoid : 
-  forall (A : Type) (equiv : relation A), Equivalence equiv -> Setoid A.
-
-Print Coq.Classes.Morphisms.Proper.
-Print Coq.Classes.CMorphisms.Proper.
-
-Proper {A} (R : crelation A) (m : A) = R m m
-     : ∀ A : Type, crelation A → A → Type
-
-Print Coq.Classes.Morphisms.respectful.
-Print Coq.Classes.CMorphisms.respectful.
-
-respectful {A B} (R : crelation A) (R' : crelation B) 
-(f g : A → B) = ∀ x y : A, R x y → R' (f x) (g y)
-     : ∀ A B : Type, crelation A → crelation B → crelation (A → B)
-
-Require Import Category.Lib.Setoid.
-Print Module Category.Lib.Setoid.
-
-Print Coq.Classes.Equivalence.equiv.
-Print Coq.Classes.SetoidClass.equiv.
-Print Coq.Relations.Relation_Definitions.equiv.
-Print Category.Lib.Setoid.equiv.
-
-Print Category.Lib.Setoid.Setoid.
-Record Setoid (A : Type) : Type := Build_Setoid
-  { equiv : crelation A;  setoid_equiv : Equivalence equiv }.
-Check Category.Lib.Setoid.Build_Setoid.
-Print Category.Lib.Setoid.setoid_equiv.
-
-Coq.Classes.SetoidClass.setoid_trans : ∀ sa : SetoidClass.Setoid ?A,
-       RelationClasses.Transitive SetoidClass.equiv
-
-Require Import Category.Instance.Sets.
-Print Module Category.Instance.Sets.
-Require Import Category.Instance.Fun.
-Print Module Category.Instance.Fun.
-Check Build_SetoidObject : ∀ carrier : Type, Setoid carrier → SetoidObject.
-Check Build_SetoidMorphism : ∀ (x : Type) (H : Setoid x)
-  (y : Type) (H0 : Setoid y) (morphism : x → y),
-  Proper (equiv ==> equiv) morphism → SetoidMorphism H H0
-Print Category.Instance.Sets.SetoidMorphism_Setoid.
-λ x y : SetoidObject, {|
-equiv := λ f g : SetoidMorphism x y, ∀ x0 : x, f x0 ≈ g x0;
-setoid_equiv := Sets.SetoidMorphism_Setoid_obligation_1 x y |}
-     : ∀ x y : SetoidObject, Setoid (SetoidMorphism x y)
-Print Category.Instance.Sets.SetoidMorphism_equiv.
-
-Check @Category.Instance.Sets.setoid_morphism_compose :
-  ∀ x y z : SetoidObject,
-       SetoidMorphism y z → SetoidMorphism x y → SetoidMorphism x z.
-
-Check @Category.Theory.Natural.Transformation.Transform_Setoid :
-  ∀ (C D : Category.Category) (F G : @Functor.Functor C D), Setoid (F ⟹ G).
-Check @Category.Theory.Functor.Functor_Setoid.
-Program Instance Functor_Setoid {C D : Category} : Setoid (C ⟶ D)
-
 (** basic constructions **)
 (* note, the following arises from the command Class Category { ... } *)
 Record Category : Type := Build_Category { ...
@@ -344,5 +271,12 @@ Notation "`1 x" := (projT1 x) : category_theory_scope
 Notation "`2 x" := (projT2 x) : category_theory_scope
 Notation "`` x" := (@projT1 _ _ x) : category_theory_scope
 
+Notation "⌊ f ⌋" := (to adj f). 
+Notation "⌈ f ⌉" := (from adj f).
+
+(* the category of adjunctions *)
+Print Category.Instance.Adjoints.adjunction.
+Print Category.Instance.Adjoints.Adjoints.
+Print Category.Instance.Adjoints.Build_adj_morphism.
 
 

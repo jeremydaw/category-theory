@@ -35,6 +35,26 @@ Print Category.Theory.Monad.Monad.
   are natural transformations *)
 Print Adjunction.
 
+(* this is the definition, in the Monad, of ext as used in Monad3 *)
+Definition extm {C M} (H : @Monad C M) x y (f : x ~> M y) := 
+  @join C M H _ ∘ fmap[M] f : M x ~> M y.
+  
+Lemma extm_respects {C M} (H : @Monad C M) x y :
+  Proper (equiv ==> equiv) (extm H x y).
+Proof. proper. unfold extm. apply compose_respects.
+- reflexivity.  - rewrite X. reflexivity. Qed.
+
+(* defining join and fmap[M] from it as used in Monad_from_3 below
+  gives back the original join and fmap[M] *)
+
+Lemma join_ext_id {C M} (H : @Monad C M) x : @join C M H x ≈ extm H _ x id.
+Proof. unfold extm. rewrite fmap_id, id_right. reflexivity. Qed.
+
+Lemma map_ext_uo {C M} (H : @Monad C M) x y (f : x ~> y) :
+  fmap[M] f ≈ extm H x y (ret[M] ∘ f).
+Proof. unfold extm. rewrite fmap_comp, comp_assoc.
+  rewrite join_fmap_ret.  rewrite id_left.  reflexivity. Qed.
+
 Section CMo. (* category C and object map M *)
 
 Context {C : Category}.
@@ -188,13 +208,12 @@ apply comp_o_r.  rewrite <- !comp_assoc.
 rewrite join_fmap_fmap.  reflexivity. Qed.
 
 Program Definition Monad3_from_Monad {C M} (H : @Monad C M) : @Monad3 C fobj := 
-  {| ret3 := fun x => ret ;
-    ext := fun x y (f : x ~{ C }~> M y) => join ∘ fmap[M] f |}.
-Next Obligation. proper. rewrite X. reflexivity. Qed.
-Next Obligation.  rewrite <- comp_assoc, <- fmap_ret.
+  {| ret3 := fun x => ret ; ext := extm H|}.
+Next Obligation. proper. pose extm_respects. rewrite X. reflexivity. Qed.
+Next Obligation. unfold extm.  rewrite <- comp_assoc, <- fmap_ret.
 rewrite comp_assoc, join_ret. apply id_left. Qed.
 Next Obligation. apply join_fmap_ret. Qed.
-Next Obligation.  rewrite !fmap_comp.
+Next Obligation. unfold extm. rewrite !fmap_comp.
 rewrite !comp_assoc.  rewrite join_fmap_join.
 apply comp_o_r.  rewrite <- !comp_assoc.
 rewrite join_fmap_fmap.  reflexivity. Qed.
@@ -206,6 +225,45 @@ Check Monad3_from_Monad_obligation_4.
 
 Check Monad_to_3.
 Check Monad3_from_Monad.
+
+(* round-trip, get back to the same functor *)
+Lemma m_to_3_same_fun {C M} (H : @Monad C M) :
+  Functor_from_3 (Monad3_from_Monad H) ≈ M.
+Proof. simpl. exists (fun x => @iso_id _ (fobj[M] x)).
+intros. simpl. rewrite id_left. rewrite id_right.
+unfold extm. rewrite fmap_comp, comp_assoc.
+rewrite join_fmap_ret. apply id_left. Qed.
+
+Lemma m_3_m_join {C M} (H : @Monad C M) x :
+  @join _ _ (Monad_from_3 (Monad3_from_Monad H)) x ≈ @join _ _ H x.
+Proof. simpl. unfold extm. rewrite fmap_id. apply id_right. Qed.
+
+Lemma m_3_m_ret {C M} (H : @Monad C M) x :
+  @ret _ _ (Monad_from_3 (Monad3_from_Monad H)) x ≈ @ret _ _ H x.
+Proof. reflexivity. Qed.
+
+Lemma m3_m_3_ext {C M} (H : @Monad3 C M) x y (f : x ~> M y) : 
+  ext (Monad3_from_Monad (Monad_from_3 H)) f ≈ ext H f.
+Proof. simpl. unfold extm. simpl. rewrite ext_jm. reflexivity. Qed.
+
+Lemma m3_m_3_ret3 {C M} (H : @Monad3 C M) x : 
+  @ret3 _ _ (Monad3_from_Monad (Monad_from_3 H)) x ≈ ret3 H.
+Proof. reflexivity. Qed.
+
+(* round-trip, get back to the same monad
+Lemma m_3_m_same C M (H : @Monad C M) :
+  Monad_from_3 (Monad3_from_Monad H) ≈ H.
+The term "H" has type "Monad M" while it is expected to have type
+"Monad (Functor_from_3 (Monad3_from_Monad H))"
+
+Lemma m3_m_3_same C Mo (H : @Monad3 C Mo) :
+  Monad3_from_Monad (Monad_from_3 H) ≈ H.
+  different error:
+  Unable to satisfy the following constraints:
+In environment: ...
+?Setoid : "Setoid Monad3"
+(as equivalences of monads are not defined)
+*)
 
 (* 
 Set Printing Coercions.
@@ -473,6 +531,9 @@ Next Obligation. unfold alg_hom. split ; intro ; rewrite <- X0.
 - rewrite <- comp_assoc.  rewrite <- fmap_ret.
   rewrite comp_assoc.  rewrite t_id.  apply id_left. Qed.
 
+Check adj_EM_obligation_1.
+
+
 (* TODO - need to show that the monad arising from this adjunction
   is the same one we started with *)
 
@@ -482,8 +543,8 @@ Next Obligation. unfold alg_hom. split ; intro ; rewrite <- X0.
 Program Definition AIE_to_alg {C D F U} 
   (H : @Adjunction_IffEq C D F U) (c : obj[C]) :
   @TAlgebra D _ (Monad_from_3 (AIE_to_Monad3 H)) (fobj[U] c) :=
-  {| t_alg := fmap[U] (counit' H c) |}.
-Next Obligation. rewrite (iffeq H), fmap_id, id_right. reflexivity. Qed.
+  {| t_alg := fmap[U] (counit' H c) ; 
+    t_id := AIE_fmap_counit_unit F U H c |}.
 Next Obligation.  rewrite fmap_id, id_right.
 rewrite (@fmap_comp _ _ F).  rewrite comp_assoc, fmap_comp.
 rewrite AIE_to_Monad3_obligation_3.  rewrite id_left.
@@ -513,23 +574,85 @@ Proof. simpl.  exists (fun x => (@iso_id _ _)). simpl.
 Lemma AIE_F_EM_comp {C D F U} (H : @Adjunction_IffEq C D F U) :
   Compose (AIE_to_fun_to_EM H) F ≈ 
   fun_to_JEM (Monad_from_3 (AIE_to_Monad3 H)).
-Proof. simpl.  exists (fun x => (@iso_id _ _)). simpl.
+Proof. simpl.
+unfold join_is_ex_alg. 
+unfold AIE_to_alg. 
+unfold join_is_alg. 
+simpl. rewrite fmap_id, id_right. (* fails *)
+Check Monad_from_3_obligation_4.
+Check AIE_fmap_counit_unit.
+Check AIE_to_alg_obligation_1.
+Check Monad_from_3_obligation_2.
+
+exists (fun x => (@iso_id _ _)). simpl.
 what should iso be, iso x is an isomorphism of two things of type
 ∃ y : obj[D], TAlgebra (Functor_from_3 (AIE_to_Monad3 H)) y
 whereas @iso_id : ∀ (C : Category) (x : obj[C]), x ≅ x
 
 iso_id should work, except that unfolding types hits the problem
 that Functor_from_3_obligation_.. is opaque
+but making things Defined, and then unfolding, is unmanageable
 
 intros.  rewrite id_left.  rewrite id_right. reflexivity. Qed.
+
+Program Definition ex_iso {C D F U} (H : @Adjunction_IffEq C D F U) x :
+  (fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x))
+        ≅ (fobj[U] (fobj[F] x);
+          join_is_alg (Monad_from_3 (AIE_to_Monad3 H)) x) :=
+  {| to := id |}.
+
+Lemma ex_iso {C D F U} (H : @Adjunction_IffEq C D F U) x :
+  (fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x))
+        ≅ (fobj[U] (fobj[F] x);
+          join_is_alg (Monad_from_3 (AIE_to_Monad3 H)) x).
+
+Check fun x : obj[D] => 
+(fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x))
+        ≅ join_is_ex_alg (Monad_from_3 (AIE_to_Monad3 H)) x.
+
+Check ∀ x : obj[D], 
+        (fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x))
+        ≅ join_is_ex_alg (Monad_from_3 (AIE_to_Monad3 H)) x.
+
+these all give errors
+The term "(fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x))" has type
+ "∃ y, ?P y" while it is expected to have type "obj[?C]".
+In fact they are objects of the JEM D category
+
+Lemma ex_iso {C D F U} (H : @Adjunction_IffEq C D F U) (x : obj[D]) : False.
+AIE_to_alg H (fobj[F] x)
+     : TAlgebra (Functor_from_3 (AIE_to_Monad3 H)) (fobj[U] (fobj[F] x))
+join_is_alg (Monad_from_3 (AIE_to_Monad3 H)) x
+     : TAlgebra (Functor_from_3 (AIE_to_Monad3 H))
+         (fobj[Functor_from_3 (AIE_to_Monad3 H)] x)
+
+so in the notation for existT, 
+P is TAlgebra (Functor_from_3 (AIE_to_Monad3 H))
+x is (fobj[U] (fobj[F] x)) or (fobj[Functor_from_3 (AIE_to_Monad3 H)] x)
+
+pose (fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x)).
+
+(fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x))
+     : ∃ y, TAlgebra (Functor_from_3 (AIE_to_Monad3 H)) y
+(fobj[U] (fobj[F] x); join_is_alg (Monad_from_3 (AIE_to_Monad3 H)) x)
+     : ∃ y, TAlgebra (Functor_from_3 (AIE_to_Monad3 H)) y
+
+projT1
+(fobj[U] (fobj[F] x); join_is_alg (Monad_from_3 (AIE_to_Monad3 H)) x) : obj[D]
+projT2
+(fobj[U] (fobj[F] x); join_is_alg (Monad_from_3 (AIE_to_Monad3 H)) x) : 
+  TAlgebra (Functor_from_3 (AIE_to_Monad3 H)) (fobj[U] (fobj[F] x)).
+
+Lemma lem {C D F U} (H : @Adjunction_IffEq C D F U) (x : obj[D]) :
+  (fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x)) -> False.
+*)
 
 Lemma AIE_EM_comp_U {C D F U} (H : @Adjunction_IffEq C D F U) :
   Compose (fun_from_JEM (Monad_from_3 (AIE_to_Monad3 H)))
   (AIE_to_fun_to_EM H) ≈ U. 
-Proof. simpl.  exists (fun x => (@iso_id _ (U (F x)))). simpl.
-  .
-*)
-
+Proof. simpl.  exists (fun x => (@iso_id _ _)). intros.
+rewrite id_left.  rewrite id_right. reflexivity. Qed.
+  
 Print TAlgebra.
 Print TAlgebraHom.
 Print Implicit naturality.
@@ -601,6 +724,9 @@ Proof. pose (fun x y => @ext C _ (JD_Pext_adj H J) x y). simpl.
 (* 
 Set Printing Coercions.
 Set Printing Implicit.
+Set Printing Notations.
 Unset Printing Coercions.
 Unset Printing Implicit.
+Unset Printing Notations.
 *)
+

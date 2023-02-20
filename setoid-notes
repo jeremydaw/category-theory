@@ -1,0 +1,136 @@
+
+(** setoids - note, two variants, one using Prop, one using Type
+  (ditto relations, Equivalence, etc) **)
+Require Import Coq.Setoids.Setoid.
+Print Module Coq.Setoids.Setoid.
+Coq.Relations.Relation_Definitions.relation = fun A : Type => A -> A -> Prop
+Coq.Classes.CRelationClasses.crelation = fun A : Type => A -> A -> Type
+Print Coq.Setoids.Setoid.Setoid_Theory.
+Print Coq.Setoids.Setoid.Build_Setoid_Theory.
+Print Coq.Classes.RelationClasses.Equivalence.
+Print Coq.Classes.CRelationClasses.Equivalence.
+Check Coq.Classes.RelationClasses.Build_Equivalence.
+Check Coq.Classes.CRelationClasses.Build_Equivalence.
+
+(* setoids using Prop *)
+Require Import Coq.Classes.SetoidClass.
+Print Module Coq.Classes.SetoidClass.
+Print Coq.Classes.SetoidClass.Setoid.
+Record Setoid (A : Type) : Type := Build_Setoid
+  { equiv : Relation_Definitions.relation A;
+    setoid_equiv : @Equivalence A equiv }.
+Check Coq.Classes.SetoidClass.Build_Setoid : 
+  forall (A : Type) (equiv : relation A), Equivalence equiv -> Setoid A.
+
+Print Coq.Classes.Morphisms.Proper.
+Print Coq.Classes.CMorphisms.Proper.
+
+Proper {A} (R : crelation A) (m : A) = R m m
+     : ∀ A : Type, crelation A → A → Type
+
+Print Coq.Classes.Morphisms.respectful.
+Print Coq.Classes.CMorphisms.respectful.
+
+Notation " R ==> R' " := (@respectful _ _ R R')
+respectful {A B} (R : crelation A) (R' : crelation B) (f g : A → B) =
+  ∀ x y : A, R x y → R' (f x) (g y)
+     : ∀ A B : Type, crelation A → crelation B → crelation (A → B)
+
+(* setoids using Type *)
+Require Import Category.Lib.Setoid.
+Print Module Category.Lib.Setoid.
+Check Category.Lib.Setoid.Build_Setoid :
+  ∀ (A : Type) (equiv : crelation A), @Equivalence A equiv → Setoid A
+Print Category.Lib.Setoid.Build_Setoid.
+Record Setoid (A : Type) : Type := Build_Setoid
+  { equiv : crelation A;  setoid_equiv : @Equivalence A equiv }.
+
+
+Print Coq.Classes.Equivalence.equiv.
+Print Coq.Classes.SetoidClass.equiv.
+Print Coq.Relations.Relation_Definitions.equiv.
+Print Category.Lib.Setoid.equiv.
+
+Print Category.Lib.Setoid.Setoid.
+Record Setoid (A : Type) : Type := Build_Setoid
+  { equiv : crelation A;  setoid_equiv : Equivalence equiv }.
+Check Category.Lib.Setoid.Build_Setoid.
+Print Category.Lib.Setoid.setoid_equiv.
+
+Coq.Classes.SetoidClass.setoid_trans : ∀ sa : SetoidClass.Setoid ?A,
+       RelationClasses.Transitive SetoidClass.equiv
+
+Require Import Category.Instance.Sets.
+Print Module Category.Instance.Sets.
+Require Import Category.Instance.Fun.
+Print Module Category.Instance.Fun.
+Check Build_SetoidObject : ∀ carrier : Type, Setoid carrier → SetoidObject.
+Check Build_SetoidMorphism : ∀ (x : Type) (H : Setoid x)
+  (y : Type) (H0 : Setoid y) (morphism : x → y),
+  Proper (equiv ==> equiv) morphism → SetoidMorphism H H0
+Print Category.Instance.Sets.SetoidMorphism_Setoid.
+λ x y : SetoidObject, {|
+equiv := λ f g : SetoidMorphism x y, ∀ x0 : x, f x0 ≈ g x0;
+setoid_equiv := Sets.SetoidMorphism_Setoid_obligation_1 x y |}
+     : ∀ x y : SetoidObject, Setoid (SetoidMorphism x y)
+Print Category.Instance.Sets.SetoidMorphism_equiv.
+
+Check @Category.Instance.Sets.setoid_morphism_compose :
+  ∀ x y z : SetoidObject,
+       SetoidMorphism y z → SetoidMorphism x y → SetoidMorphism x z.
+
+Check @Category.Theory.Natural.Transformation.Transform_Setoid :
+  ∀ (C D : Category.Category) (F G : @Functor.Functor C D), Setoid (F ⟹ G).
+Check @Category.Theory.Functor.Functor_Setoid.
+Program Instance Functor_Setoid {C D : Category} : Setoid (C ⟶ D)
+
+Print Category.Theory.Functor.fmap_respects.
+fmap_respects@{o1 h1 p1 o2 h2 p2} =
+λ (C D : Category) (Functor : C ⟶ D), @fmap_respects _ _ Functor
+     : ∀ (C D : Category) (Functor : C ⟶ D) (x y : obj[C]),
+       @Proper (x ~{ C }~> y → fobj[Functor] x ~{ D }~> fobj[Functor] y)
+         (@equiv _ (@homset C x y) ==>
+          @equiv _ (@homset D (fobj[Functor] x) (fobj[Functor] y)))
+         fmap[Functor]
+
+Print Category.Theory.Category.homset. Print Build_Category.
+homset@{o h p} =
+λ Category : Category.Category, @homset Category
+     : ∀ (Category : Category.Category) (X Y : obj[Category]),
+       Setoid (X ~{ Category }~> Y)
+
+to explain meaning of fmap_respects above
+Lemma x (C D : Category) (Functor : C ⟶ D) (x y : obj[C]) : False.
+Proof. pose (@Proper (x ~{ C }~> y → fobj[Functor] x ~{ D }~> fobj[Functor] y)
+   (@equiv _ (@homset C x y) ==>
+    @equiv _ (@homset D (fobj[Functor] x) (fobj[Functor] y))) fmap[Functor]).
+unfold Proper in T.
+unfold respectful in T.
+Abort.
+
+to explain meaning of ext_respects 
+Lemma y C M (m : @Monad3 C M) (x y : obj[C]) : False.
+Proof. pose (@Proper (x ~{ C }~> M y → M x ~{ C }~> M y)
+         (@equiv _ (@homset C x (M y)) ==>
+          @equiv _ (@homset C (M x) (M y))) (@ext _ _ m x y)).
+unfold Proper in T.
+unfold respectful in T.
+Abort.
+
+Check compose_respects. Print Build_Category.
+Check Category.Theory.Functor.Compose_respects.
+Check Category.Theory.Functor.fobj_respects.
+Check fmap_respects.  Print Build_Functor.
+Check Category.Theory.Adjunction.to_adj_respects. (* also from_ *)
+
+Print Category.Theory.Functor.Functor_Setoid.
+Check Functor.Functor_Setoid_obligation_1.
+
+Print Category.Theory.Natural.Transformation.Transform_Setoid.
+Check Transformation.Transform_Setoid_obligation_1.
+
+Coq < Print Implicit equiv. 
+equiv@{u u0} : ∀ {A : Type}, Setoid A → crelation A
+Arguments A, Setoid are implicit and maximally inserted
+
+
