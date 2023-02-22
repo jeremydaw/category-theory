@@ -562,90 +562,65 @@ symmetry. apply AIE_counit_nt. Qed.
 Next Obligation. proper. rewrite X. reflexivity. Qed.
 Next Obligation. apply fmap_comp. Qed.
 
-(*
-to do this requires changing AIE_to_fun_to_EM
-which requires changing AIE_to_alg
-or proving more equivalences 
-Lemma AIE_F_EM_comp {C D F U} (H : @Adjunction_IffEq C D F U) :
-  Compose (AIE_to_fun_to_EM H) F ≈ 
-  fun_to_JEM (AIE_to_Monad H).
-Proof. simpl.  exists (fun x => (@iso_id _ _)). simpl.
+Print AIE_to_alg.
+Print join_is_alg.
+Print join_is_ex_alg.
 
-Lemma AIE_F_EM_comp {C D F U} (H : @Adjunction_IffEq C D F U) :
-  Compose (AIE_to_fun_to_EM H) F ≈ 
-  fun_to_JEM (Monad_from_3 (AIE_to_Monad3 H)).
-Proof. simpl.
-unfold join_is_ex_alg. 
-unfold AIE_to_alg. 
-unfold join_is_alg. 
-simpl. rewrite fmap_id, id_right. (* fails *)
-Check Monad_from_3_obligation_4.
-Check AIE_fmap_counit_unit.
-Check AIE_to_alg_obligation_1.
-Check Monad_from_3_obligation_2.
-
-exists (fun x => (@iso_id _ _)). simpl.
-what should iso be, iso x is an isomorphism of two things of type
-∃ y : obj[D], TAlgebra (Functor_from_3 (AIE_to_Monad3 H)) y
-whereas @iso_id : ∀ (C : Category) (x : obj[C]), x ≅ x
-
-iso_id should work, except that unfolding types hits the problem
-that Functor_from_3_obligation_.. is opaque
-but making things Defined, and then unfolding, is unmanageable
-
-intros.  rewrite id_left.  rewrite id_right. reflexivity. Qed.
-
-Program Definition ex_iso {C D F U} (H : @Adjunction_IffEq C D F U) x :
+Program Definition ex_iso_alg {C D F U} (H : @Adjunction_IffEq C D F U) x :
+  @Isomorphism (JEM (Monad_from_3 (AIE_to_Monad3 H))) 
   (fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x))
-        ≅ (fobj[U] (fobj[F] x);
-          join_is_alg (Monad_from_3 (AIE_to_Monad3 H)) x) :=
-  {| to := id |}.
+  (fobj[U] (fobj[F] x); join_is_alg (Monad_from_3 (AIE_to_Monad3 H)) x) :=
+  {| to := {| t_alg_hom := id |} ;
+    from := {| t_alg_hom := id |} |}.
+Next Obligation. rewrite fmap_id, !id_right, id_left.
+rewrite AIE_counit_fmap_unit. 
+rewrite fmap_id, id_right. reflexivity. Qed.
+Next Obligation. rewrite fmap_id, !id_right, id_left.
+rewrite AIE_counit_fmap_unit. 
+rewrite fmap_id, id_right. reflexivity. Qed.
 
-Lemma ex_iso {C D F U} (H : @Adjunction_IffEq C D F U) x :
-  (fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x))
-        ≅ (fobj[U] (fobj[F] x);
-          join_is_alg (Monad_from_3 (AIE_to_Monad3 H)) x).
-
-Check fun x : obj[D] => 
-(fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x))
-        ≅ join_is_ex_alg (Monad_from_3 (AIE_to_Monad3 H)) x.
-
-Check ∀ x : obj[D], 
-        (fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x))
-        ≅ join_is_ex_alg (Monad_from_3 (AIE_to_Monad3 H)) x.
-
-these all give errors
+(* without (JEM _) get errors
 The term "(fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x))" has type
- "∃ y, ?P y" while it is expected to have type "obj[?C]".
-In fact they are objects of the JEM D category
+ "∃ y, ?P y" while it is expected to have type "obj[?C]".  *)
 
-Lemma ex_iso {C D F U} (H : @Adjunction_IffEq C D F U) (x : obj[D]) : False.
-AIE_to_alg H (fobj[F] x)
-     : TAlgebra (Functor_from_3 (AIE_to_Monad3 H)) (fobj[U] (fobj[F] x))
-join_is_alg (Monad_from_3 (AIE_to_Monad3 H)) x
-     : TAlgebra (Functor_from_3 (AIE_to_Monad3 H))
-         (fobj[Functor_from_3 (AIE_to_Monad3 H)] x)
+(* but the following 
+Lemma ex_iso_alg_alt {C D F U} (H : @Adjunction_IffEq C D F U) x :
+  @Isomorphism (JEM (Monad_from_3 (AIE_to_Monad3 H))) 
+  (fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x))
+  (fobj[U] (fobj[F] x); join_is_alg (Monad_from_3 (AIE_to_Monad3 H)) x).
+Proof.  eapply iso_id.
+gives error Unable to unify
+ "(fobj[U] (fobj[F] x); join_is_alg (Monad_from_3 (AIE_to_Monad3 H)) x)" with
+ "(fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x))".
+
+illustration of types
+Check (fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x)).
+Check join_is_ex_alg (Monad_from_3 (AIE_to_Monad3 H)) x.
+ : ∃ y : obj[D], TAlgebra (Functor_from_3 (AIE_to_Monad3 H)) y.
+
+Check (AIE_to_alg H (fobj[F] x)).
+  : TAlgebra (Functor_from_3 (AIE_to_Monad3 H)) (fobj[U] (fobj[F] x))
+Check (join_is_alg (Monad_from_3 (AIE_to_Monad3 H)) x).
+  : TAlgebra (Functor_from_3 (AIE_to_Monad3 H))
+         (fobj[Functor_from_3 (AIE_to_Monad3 H)] x).
 
 so in the notation for existT, 
 P is TAlgebra (Functor_from_3 (AIE_to_Monad3 H))
 x is (fobj[U] (fobj[F] x)) or (fobj[Functor_from_3 (AIE_to_Monad3 H)] x)
-
-pose (fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x)).
-
-(fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x))
-     : ∃ y, TAlgebra (Functor_from_3 (AIE_to_Monad3 H)) y
-(fobj[U] (fobj[F] x); join_is_alg (Monad_from_3 (AIE_to_Monad3 H)) x)
-     : ∃ y, TAlgebra (Functor_from_3 (AIE_to_Monad3 H)) y
 
 projT1
 (fobj[U] (fobj[F] x); join_is_alg (Monad_from_3 (AIE_to_Monad3 H)) x) : obj[D]
 projT2
 (fobj[U] (fobj[F] x); join_is_alg (Monad_from_3 (AIE_to_Monad3 H)) x) : 
   TAlgebra (Functor_from_3 (AIE_to_Monad3 H)) (fobj[U] (fobj[F] x)).
-
-Lemma lem {C D F U} (H : @Adjunction_IffEq C D F U) (x : obj[D]) :
-  (fobj[U] (fobj[F] x); AIE_to_alg H (fobj[F] x)) -> False.
 *)
+
+Lemma AIE_F_EM_comp {C D F U} (H : @Adjunction_IffEq C D F U) :
+  Compose (AIE_to_fun_to_EM H) F ≈ 
+  fun_to_JEM (Monad_from_3 (AIE_to_Monad3 H)).
+Proof. simpl. exists (ex_iso_alg H). intros. simpl.
+rewrite id_left, id_right.  apply fmap_respects.
+symmetry.  apply iffeq. apply AIE_unit_nt. Qed.
 
 Lemma AIE_EM_comp_U {C D F U} (H : @Adjunction_IffEq C D F U) :
   Compose (fun_from_JEM (Monad_from_3 (AIE_to_Monad3 H)))

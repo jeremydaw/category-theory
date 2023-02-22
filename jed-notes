@@ -266,6 +266,8 @@ Check ((Id[D]) ^op ∏⟶ U).
 (* TAlgebra *)
 Notation "t_alg[ T ]" := (@t_alg _ _ _ _ T)
 Notation "t_alg_hom[ F ]" := (@t_alg_hom _ _ _ _ _ _ _ F)
+Print Category.Monad.Algebra.TAlgebra.
+Print Category.Monad.Algebra.TAlgebraHom.
 
 Notation "`1 x" := (projT1 x) : category_theory_scope
 Notation "`2 x" := (projT2 x) : category_theory_scope
