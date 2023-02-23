@@ -86,8 +86,32 @@ Class Adjunction_OW := {
   adjr : forall {x y} (g : x ~{ D }~> U y), F x ~{ C }~> y ;
   (* the adjoint arrow is the unique one which makes the diagram commute *)
   adjruc : forall {x y} (f : F x ~{ C }~> y) (g : x ~{ D }~> U y),
-    iffT (fmap[U] f ∘ unitOW x ≈ g) (adjr g ≈ f)
-  }.
+    iffT (fmap[U] f ∘ unitOW x ≈ g) (adjr g ≈ f) }.
+
+Lemma AOW_adjr_unit_id (H : Adjunction_OW) d : adjr (unitOW d) ≈ id.
+Proof. apply adjruc. rewrite fmap_id. apply id_left. Qed.
+
+Definition AOW_counit (H : Adjunction_OW) c := @adjr H _ c id.
+
+Lemma AOW_fmap_counit_unit (H : Adjunction_OW) c :
+  fmap[U] (AOW_counit H c) ∘ transform unitOW _ ≈ @id D (fobj[U] c).
+Proof. apply adjruc. reflexivity. Qed.
+
+Lemma AOW_adjr_unit (H : Adjunction_OW) d :
+  adjr (transform unitOW _) ≈ @id C (fobj[F] d).
+Proof. apply adjruc. rewrite fmap_id. apply id_left. Qed.
+
+Lemma AOW_adjr_eq (H : Adjunction_OW) d c (g : d ~> fobj[U] c) :
+  adjr g ≈ AOW_counit H _ ∘ fmap[F] g.
+Proof. apply adjruc. rewrite fmap_comp, <- comp_assoc.
+rewrite (naturality unitOW _ _ g). rewrite comp_assoc.
+rewrite AOW_fmap_counit_unit. apply id_left. Qed.
+
+Lemma AOW_counit_nt (H : Adjunction_OW) c c' f :
+  AOW_counit H c' ∘ fmap[F] (fmap[U] f) ≈ f ∘ AOW_counit H c.
+Proof. rewrite <- AOW_adjr_eq.
+apply adjruc. rewrite fmap_comp, <- comp_assoc.
+rewrite AOW_fmap_counit_unit. apply id_right. Qed.
 
 Print Implicit adjr.
 
@@ -95,8 +119,7 @@ Class Adjunction_IffEq := {
   unit' : forall {x : obj[D]}, x ~{ D }~> U (F x) ;
   counit' : forall {y : obj[C]}, F (U y) ~{ C }~> y ;
   iffeq : forall {x y} (f : F x ~{ C }~> y) (g : x ~{ D }~> U y),
-    iffT (fmap[U] f ∘ unit' ≈ g) (counit' ∘ fmap[F] g ≈ f)
-  }.
+    iffT (fmap[U] f ∘ unit' ≈ g) (counit' ∘ fmap[F] g ≈ f) }.
 
 Lemma AIE_fmap_counit_unit (H : Adjunction_IffEq) c :
   fmap[U] counit' ∘ unit' ≈ @id D (fobj[U] c).
@@ -223,14 +246,8 @@ Ltac under_forall2 f nun :=
   unfold all2T in ufX ; clear nun ; rename ufX into nun ].
 *)   
 
-(* should we try using 
-Check @hom_fmap_counit_unit.
-Check @hom_counit_fmap_unit.
-Check @hom_unit.
-Check @hom_counit.
-see Adjunction/Hom.v
-but this goes via naturality of unit and counit, which we don't need *)
-
+(* neater version of this later, but keep comments in this one
+  about the difficulties encountered *)
 Lemma Adjunction_Hom_to_IffEq (A : Adjunction_Hom F U) : Adjunction_IffEq.
 Proof.
 destruct A.  destruct hom_adj.
@@ -248,7 +265,7 @@ rewrite fmap_id, id_left, id_right in iso_from_to.
 (* simpler approach to singling quantified arguments *)
 pose (fun a b c d j k => nun (a, b) (c, d) (j, k)) as nuns.
 pose (fun a b c d j k => ncoun (a, b) (c, d) (j, k)) as ncouns.
-simpl in nuns.  simpl in ncouns.  clearbody nuns ncouns. 
+simpl in nuns.  simpl in ncouns.  clearbody nuns ncouns. clear nun ncoun.
 
 (* note, this is good for understanding tun, tcoun,
   works because of implicit coercion morphism *)
@@ -260,9 +277,9 @@ intros.  unfold un. unfold coun.
 (* some previous version required these but not now
 pose (proper_morphism (tun (x, y))) as ptuxy.
 pose (proper_morphism (tcoun (x, y))) as ptcxy. *)
-pose (ncouns _ _ _ _ g id id).  rewrite fmap_id, !id_left in e.
-pose (nuns _ _ _ _ id f id).  rewrite fmap_id, !id_right in e0.
-rewrite e, e0.  split ; intros ; rewrite <- X.
+pose (ncouns _ _ _ _ g id id) as ncg.  rewrite fmap_id, !id_left in ncg.
+pose (nuns _ _ _ _ id f id) as nuf.  rewrite fmap_id, !id_right in nuf.
+rewrite ncg, nuf.  split ; intros ; rewrite <- X.
 - rewrite iso_from_to, fmap_id, id_left. apply id_right.
 - rewrite iso_to_from, fmap_id, id_left. apply id_right.
 Qed.
@@ -276,34 +293,15 @@ intros. split ; intro ; rewrite <- X ; rewrite fmap_comp.
 - rewrite comp_assoc.
 pose (naturality_sym counit _ _ f). simpl in e.
 rewrite e.  rewrite <- comp_assoc.
-rewrite (counit_fmap_unit x).
-apply id_right.
+rewrite (counit_fmap_unit x).  apply id_right.
 - rewrite <- comp_assoc.
 pose (naturality unit _ _ g). simpl in e.
 rewrite e.  rewrite comp_assoc.
-rewrite (fmap_counit_unit y).
-apply id_left. Qed.
+rewrite (fmap_counit_unit y).  apply id_left. Qed.
 
-Lemma Adjunction_OW_to_IffEq (A : Adjunction_OW) : Adjunction_IffEq.
-Proof. destruct A.
-(* define counit and get identity about it *)
-pose (fun y => adjr0 _ y id) as coun.
-pose (fun y => snd (adjruc0 _ _ (coun y) id)).
-
-(* why is eapply required here ?? *)
-eapply (Build_Adjunction_IffEq (transform unitOW0) coun).
-intros.  require (e y). { reflexivity. }
-(* apply adjruc0 to combination of triangle for id and rectangle for unit nt *)
-pose (adjruc0 _ _ (coun _ ∘ fmap[F] g) g). 
-require (fst i). { rewrite fmap_comp.
-rewrite comp_assoc_sym.  rewrite (naturality unitOW0 _ _ g).  simpl.
-rewrite comp_assoc. rewrite e. apply id_left. }
-(* rewrite <- i. fails *)
-clear i. intro.
-(* rewrite <- X. fails - why? *)
-(* rewrite (adjruc0 _ _ f g). fails - why? *)
-pose (adjruc0 _ _ f g). apply (iffT_Transitive _ _ _ i).
-rewrite X ; reflexivity. Qed.
+Program Definition Adjunction_OW_to_IffEq (A : Adjunction_OW) :
+  Adjunction_IffEq := {| unit' := transform unitOW ; counit' := AOW_counit A |}.
+Next Obligation. rewrite <- AOW_adjr_eq. apply adjruc. Qed.
 
 (* can use these to detect when there is a coerced function not
   shown at the head of a goal or a hypothesis
@@ -313,6 +311,26 @@ Definition apD W f (x : W) (X : ap Type W f x) := X : f x.
 *)
 
 End CDFU.
+
+(* alternative to Adjunction_Hom_to_IffEq *)
+Program Definition Adjunction_Hom_to_IffEq_alt {C D F U} 
+  (A : @Adjunction_Hom C D F U) : @Adjunction_IffEq C D F U := 
+  {| unit' := λ x : obj[D], to hom_adj (x, fobj[F] x) id{C} ;
+    counit' := λ x : obj[C], from hom_adj (fobj[U] x, x) id{D} |}.
+Next Obligation.
+pose (iso_to_from hom_adj) as tf.  simpl in tf.
+pose (iso_from_to hom_adj) as ft.  simpl in ft.
+pose (fun a b c d j k => naturality (to hom_adj) (a, b) (c, d) (j, k)) as nuns.
+pose (fun a b c d j k => 
+  naturality (from hom_adj) (a, b) (c, d) (j, k)) as ncouns.
+simpl in *. 
+
+pose (ncouns _ _ _ _ g id id) as ncg.  rewrite fmap_id, !id_left in ncg.
+pose (nuns _ _ _ _ id f id) as nuf.  rewrite fmap_id, !id_right in nuf.
+rewrite ncg, nuf.  split ; intros ; rewrite <- X.
+- rewrite ft, fmap_id, id_left. apply id_right.
+- rewrite tf, fmap_id, id_left. apply id_right.  Qed.
+
 (* note here how only two of the four conditions in the
   definition of Adjunction are used, this is because
   to_adj_nat_l and from_adj_nat_l say the same thing, likewise
@@ -320,11 +338,8 @@ End CDFU.
   *)
 Program Definition Adjunction_Universal_to_IffEq {C D F U} (A : F ⊣ U)
   : @Adjunction_IffEq C D F U := {|
-    unit' := fun x => to adj id ;
-    counit' := fun y => from adj id
-    |}.
-Next Obligation. 
-split ; intro ; rewrite <- X ; rewrite <- to_adj_nat_r ;
+    unit' := fun x => to adj id ; counit' := fun y => from adj id |}.
+Next Obligation.  split ; intro ; rewrite <- X ; rewrite <- to_adj_nat_r ;
   rewrite <- from_adj_nat_l ; rewrite id_left, id_right.
 { exact (iso_from_to (adj[A]) f). }
 (* this works because (iso_from_to (adj[A])) is
@@ -548,18 +563,11 @@ Check Adjunction_IffEq_comp_obligation_1.
 Print Adjunction_IffEq_comp.
 
 (*
-Set Printing Implicit. 
-Unset Printing Implicit. 
-*)
-(* now earlier
-Lemma AIE_counit_nt {C D F U} (H : @Adjunction_IffEq C D F U) c c' f :
-  counit' H c' ∘ fmap[F] (fmap[U] f) ≈ f ∘ counit' H c.
-Proof. rewrite <- iffeq, fmap_comp, <- comp_assoc.
-rewrite AIE_fmap_counit_unit. apply id_right.  Qed.
-
-Lemma AIE_unit_nt {C D F U} (H : @Adjunction_IffEq C D F U) d d' g :
-  fmap[U] (fmap[F] g) ∘ unit' H d ≈ unit' H d' ∘ g.
-Proof. rewrite iffeq, fmap_comp, comp_assoc.
-rewrite AIE_counit_fmap_unit. apply id_left.  Qed.
+Set Printing Coercions.
+Set Printing Implicit.
+Set Printing Notations.
+Unset Printing Coercions.
+Unset Printing Implicit.
+Unset Printing Notations.
 *)
 

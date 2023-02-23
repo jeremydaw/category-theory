@@ -99,7 +99,8 @@ Record Isomorphism (C : Category) (x y : obj[C]) : Type := Build_Isomorphism
     iso_to_from : Setoid.equiv (to ∘ from) id{C};
     iso_from_to : Setoid.equiv (from ∘ to) id{C} }
 
-Notation "x ≅ y" := Isomorphism x y
+Notation "x ≅ y" := (@Isomorphism _%category x%object y%object)
+Notation "x ≅[ C ] y" := (@Isomorphism C%category x%object y%object)
 
 to : ?x ≅ ?y -> ?x ~{ ?C }~> ?y
 from : ?x ≅ ?y -> ?y ~{ ?C }~> ?x
@@ -165,11 +166,9 @@ Notation "naturality[ F ]" := (@naturality _ _ _ _ F%transform)
 Coercion transform : Transform >-> Funclass.
 see Theory/Natural/Transformation.v *)
 
-Check Transform_reflexive.
-Check Transform_transitive.
-Check Transform_respects.
-Check nat_compose.
-Check nat_compose_respects.
+Check Category.Theory.Natural.Transformation.Transform_respects.
+Check Category.Theory.Natural.Transformation.nat_compose.
+Check Category.Theory.Natural.Transformation.nat_compose_respects.
 Notation "F ∙ G" := (@nat_compose _ _ _ _ _ F G)
 
 (* adjoint functors, ie adjunctions, see Adjunction/README.md,
@@ -210,6 +209,9 @@ Print Implicit Category.Functor.Construction.Product.ProductFunctor.
 Arguments C, D, F, J, K, G are implicit and maximally inserted
 Notation "C ^op" := Opposite C (Category.Construction.Opposite.Opposite)
 "F ^op" := Opposite_Functor F (Category.Functor.Opposite.Opposite_Functor)
+
+Notation "[ C , D ]" := Fun : category_scope (default interpretation)
+Print Category.Instance.Fun.Fun.
 
 Record Adjunction_Hom (C D : Category) (F : D ⟶ C)
 (U : C ⟶ D) : Type := Build_Adjunction_Hom

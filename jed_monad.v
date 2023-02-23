@@ -358,11 +358,13 @@ Print Implicit adjrucnf.
 Require Category.Monad.Adjunction.
 Check Category.Monad.Adjunction.Adjunction_Monad.
 
+(*
 Lemma AOW_adjr_unit_id {C D F U} (H : @Adjunction_OW C D F U) d :
   adjr F U (transform (unitOW F U) d) ≈ id{C}.
 Proof. apply adjruc. simpl.  rewrite fmap_id. apply id_left. Qed.
+*)
   
-Program Definition Adjunction_OW_to_Monad3 {C D F U}
+Program Definition AOW_to_Monad3 {C D F U}
   (H : @Adjunction_OW C D F U) : @Monad3 D (fobj[Compose U F]) :=
   {| ret3 := transform (unitOW F U) ;
      ext := fun x z h => fmap[U] (adjr F U h : F x ~{ C }~> F z) |}.
@@ -370,17 +372,17 @@ Next Obligation. proper. apply fmap_respects.
 apply adjruc. rewrite X. apply adjruc. reflexivity. Qed.
 Next Obligation.  apply adjruc. reflexivity. Qed.
 
-(* rewrite AOW_adjr_unit_id fails - wny?  but next succeeds *)
-Next Obligation.  rewrite (AOW_adjr_unit_id H x). apply fmap_id. Qed.
+(* rewrite AOW_adjr_unit_id fails - why?  but next succeeds *)
+Next Obligation.  rewrite (AOW_adjr_unit_id F U H x). apply fmap_id. Qed.
  
 Next Obligation.
-Check adjr.  Check unitOW.  Check adjruc. (* give ∀ (F U : D ⟶ D) ... *)
+Check adjr.  Check unitOW.  Check (adjruc H).
 rewrite <- fmap_comp. apply fmap_respects. 
 symmetry. apply adjruc.
 rewrite fmap_comp.  rewrite <- comp_assoc.
 apply comp_o_l. apply adjruc. reflexivity. Qed.
 
-(* this proof very similar to Adjunction_OW_to_Monad3 *)
+(* this proof very similar to AOW_to_Monad3 *)
 Program Definition AIE_to_Monad3 {C D F U}
   (H : @Adjunction_IffEq C D F U) : @Monad3 D (fobj[Compose U F]) :=
   {| ret3 := unit' H ;
@@ -392,7 +394,7 @@ Next Obligation.  rewrite <- fmap_comp. apply fmap_respects.
 rewrite (@fmap_comp _ _ F). rewrite !comp_assoc.
 rewrite AIE_counit_nt.  reflexivity. Qed.
 
-Check Adjunction_OW_to_Monad3.  Check AIE_to_Monad3.
+Check AOW_to_Monad3.  Check AIE_to_Monad3.
 Check AIE_to_Monad3_obligation_2.
 Check AIE_to_Monad3_obligation_3.
 Check AIE_to_Monad3_obligation_4.

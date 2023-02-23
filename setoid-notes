@@ -79,6 +79,15 @@ Check @Category.Instance.Sets.setoid_morphism_compose :
   ∀ x y z : SetoidObject,
        SetoidMorphism y z → SetoidMorphism x y → SetoidMorphism x z.
 
+(* categories of sets, adjunctions *)
+Print Category.Instance.Sets.Sets.
+Require Category.Instance.Adjoints.
+Print Category.Instance.Adjoints.Adjoints.
+
+Category.Instance.Sets.False_Setoid : Setoid False
+Category.Instance.Sets.proper_morphism : 
+  ∀ s : SetoidMorphism False_Setoid False_Setoid, Proper (equiv ==> equiv) s
+
 Check @Category.Theory.Natural.Transformation.Transform_Setoid :
   ∀ (C D : Category.Category) (F G : @Functor.Functor C D), Setoid (F ⟹ G).
 Check @Category.Theory.Functor.Functor_Setoid.
@@ -122,6 +131,7 @@ Check Category.Theory.Functor.Compose_respects.
 Check Category.Theory.Functor.fobj_respects.
 Check fmap_respects.  Print Build_Functor.
 Check Category.Theory.Adjunction.to_adj_respects. (* also from_ *)
+Check Category.Theory.Natural.Transformation.nat_compose_respects.
 
 Print Category.Theory.Functor.Functor_Setoid.
 Check Functor.Functor_Setoid_obligation_1.
