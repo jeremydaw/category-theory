@@ -193,8 +193,7 @@ apply (Build_Adjunction_Transform (iff_unit H) (iff_counit H)) ;
   intro ; apply i.
 (* problem?, that iff_unit is nt, unit' is function, but there is a coercion *)
 - rewrite fmap_id, id_left.  reflexivity.
-- rewrite fmap_id, id_right.  reflexivity.
-Qed.
+- rewrite fmap_id, id_right.  reflexivity.  Qed.
 
 Print Build_Isomorphism.
 
@@ -246,46 +245,6 @@ Ltac under_forall2 f nun :=
   unfold all2T in ufX ; clear nun ; rename ufX into nun ].
 *)   
 
-(* neater version of this later, but keep comments in this one
-  about the difficulties encountered *)
-Lemma Adjunction_Hom_to_IffEq (A : Adjunction_Hom F U) : Adjunction_IffEq.
-Proof.
-destruct A.  destruct hom_adj.
-destruct to as [ tun nun nsun ].
-destruct from as [ tcoun ncoun nscoun ].
-pose (fun x => tun (x, F x) id) as un.
-pose (fun y => tcoun (U y, y) id) as coun.
-simpl in *. clear nsun nscoun. (* not used *)
-
-(* now convert forall pair to two foralls *)
-(* because these fail 
-rewrite -> fmap_id, id_left, id_right in iso_to_from.
-rewrite fmap_id, id_left, id_right in iso_from_to.
-*)
-(* simpler approach to singling quantified arguments *)
-pose (fun a b c d j k => nun (a, b) (c, d) (j, k)) as nuns.
-pose (fun a b c d j k => ncoun (a, b) (c, d) (j, k)) as ncouns.
-simpl in nuns.  simpl in ncouns.  clearbody nuns ncouns. clear nun ncoun.
-
-(* note, this is good for understanding tun, tcoun,
-  works because of implicit coercion morphism *)
-pose (fun x y f => tun (x, y) f) as tuns. simpl in tuns.
-pose (fun x y g => tcoun (x, y) g) as tcouns. simpl in tcouns.
-
-apply (Build_Adjunction_IffEq un coun).
-intros.  unfold un. unfold coun.
-(* some previous version required these but not now
-pose (proper_morphism (tun (x, y))) as ptuxy.
-pose (proper_morphism (tcoun (x, y))) as ptcxy. *)
-pose (ncouns _ _ _ _ g id id) as ncg.  rewrite fmap_id, !id_left in ncg.
-pose (nuns _ _ _ _ id f id) as nuf.  rewrite fmap_id, !id_right in nuf.
-rewrite ncg, nuf.  split ; intros ; rewrite <- X.
-- rewrite iso_from_to, fmap_id, id_left. apply id_right.
-- rewrite iso_to_from, fmap_id, id_left. apply id_right.
-Qed.
-
-Print Implicit Adjunction_Hom_to_IffEq.
-
 Lemma Adjunction_Transform_to_IffEq (A : F ∹ U) : Adjunction_IffEq.
 Proof. destruct A.
 apply (Build_Adjunction_IffEq (transform unit) (transform counit)).
@@ -311,6 +270,47 @@ Definition apD W f (x : W) (X : ap Type W f x) := X : f x.
 *)
 
 End CDFU.
+
+(* neater version of this later, but keep comments in this one
+  about the difficulties encountered *)
+Lemma Adjunction_Hom_to_IffEq {C D F U} (A : Adjunction_Hom F U) :
+  @Adjunction_IffEq C D F U.
+Proof.
+destruct A.  destruct hom_adj.
+destruct to as [ tun nun nsun ].
+destruct from as [ tcoun ncoun nscoun ].
+pose (fun x => tun (x, F x) id) as un.
+pose (fun y => tcoun (U y, y) id) as coun.
+simpl in *. clear nsun nscoun. (* not used *)
+
+(* now convert forall pair to two foralls *)
+(* because these fail 
+rewrite -> fmap_id, id_left, id_right in iso_to_from.
+rewrite fmap_id, id_left, id_right in iso_from_to.
+*)
+(* simpler approach to singling quantified arguments *)
+pose (fun a b c d j k => nun (a, b) (c, d) (j, k)) as nuns.
+pose (fun a b c d j k => ncoun (a, b) (c, d) (j, k)) as ncouns.
+simpl in nuns.  simpl in ncouns.  clearbody nuns ncouns. clear nun ncoun.
+
+(* note, this is good for understanding tun, tcoun,
+  works because of implicit coercion morphism *)
+pose (fun x y f => tun (x, y) f) as tuns. simpl in tuns.
+pose (fun x y g => tcoun (x, y) g) as tcouns. simpl in tcouns.
+
+apply (Build_Adjunction_IffEq F U un coun).
+intros.  unfold un. unfold coun.
+(* some previous version required these but not now
+pose (proper_morphism (tun (x, y))) as ptuxy.
+pose (proper_morphism (tcoun (x, y))) as ptcxy. *)
+pose (ncouns _ _ _ _ g id id) as ncg.  rewrite fmap_id, !id_left in ncg.
+pose (nuns _ _ _ _ id f id) as nuf.  rewrite fmap_id, !id_right in nuf.
+rewrite ncg, nuf.  split ; intros ; rewrite <- X.
+- rewrite iso_from_to, fmap_id, id_left. apply id_right.
+- rewrite iso_to_from, fmap_id, id_left. apply id_right.
+Qed.
+
+Print Implicit Adjunction_Hom_to_IffEq.
 
 (* alternative to Adjunction_Hom_to_IffEq *)
 Program Definition Adjunction_Hom_to_IffEq_alt {C D F U} 
@@ -355,10 +355,6 @@ Print Implicit iso_from_to.
 Print Implicit hom.
 Print Implicit adj.
 Print Implicit to_adj_nat_l.
-*)
-
-(*
-End CDFU.
 *)
 
 Arguments Adjunction_IffEq {C D} F%functor U%functor.

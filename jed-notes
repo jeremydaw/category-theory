@@ -171,8 +171,8 @@ Check Category.Theory.Natural.Transformation.nat_compose.
 Check Category.Theory.Natural.Transformation.nat_compose_respects.
 Notation "F ∙ G" := (@nat_compose _ _ _ _ _ F G)
 
-(* adjoint functors, ie adjunctions, see Adjunction/README.md,
-  https://en.wikipedia.org/wiki/Adjoint_functors *)
+(** adjoint functors, ie adjunctions, see Adjunction/README.md,
+  https://en.wikipedia.org/wiki/Adjoint_functors **)
 Record Adjunction (C D : Category) (F : D ⟶ C) (U : C ⟶ D) : Type
   := Build_Adjunction
   { adj : ∀ (x : obj[D]) (y : obj[C]), F x ~{ C }~> y ≊ x ~{ D }~> U y; ... } 
@@ -199,19 +199,26 @@ Record Adjunction_Transform (C D : Category) (F : D ⟶ C)
 (* linking of various definitions of adjoint functors *)
 Print Module Category.Adjunction.Hom.
 
-following uses Category.Functor.Hom.Hom :  ∀ C : Category, (C ^op ∏ C) ⟶ Sets
-which uses Sets category, Category.Instance.Sets.Sets
+(* categories of sets, functors, adjunctions *)
+Print Category.Instance.Sets.Sets.
+Require Category.Instance.Adjoints.
+Print Category.Instance.Adjoints.Adjoints.
+Print Category.Instance.Fun.Fun.
+
+Notation "[ C , D ]" := Fun : category_scope (default interpretation)
+
+Category.Functor.Hom.Hom :  ∀ C : Category, (C ^op ∏ C) ⟶ Sets
 Notation "F ∏⟶ G" := ProductFunctor
 Notation "C ∏ D" := Product C D
 Check Category.Construction.Product.Product : Category → Category → Category.
-Print Implicit Category.Functor.Construction.Product.ProductFunctor.
+Check @Category.Functor.Construction.Product.ProductFunctor.
 ∀ C D : Category, C ⟶ D → ∀ J K : Category, J ⟶ K → (C ∏ J) ⟶ D ∏ K
 Arguments C, D, F, J, K, G are implicit and maximally inserted
+
+Check Category.Functor.Opposite.Opposite_Functor.
+Check Category.Construction.Opposite.Opposite : Category → Category.
 Notation "C ^op" := Opposite C (Category.Construction.Opposite.Opposite)
 "F ^op" := Opposite_Functor F (Category.Functor.Opposite.Opposite_Functor)
-
-Notation "[ C , D ]" := Fun : category_scope (default interpretation)
-Print Category.Instance.Fun.Fun.
 
 Record Adjunction_Hom (C D : Category) (F : D ⟶ C)
 (U : C ⟶ D) : Type := Build_Adjunction_Hom

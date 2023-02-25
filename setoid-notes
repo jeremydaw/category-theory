@@ -79,10 +79,11 @@ Check @Category.Instance.Sets.setoid_morphism_compose :
   ∀ x y z : SetoidObject,
        SetoidMorphism y z → SetoidMorphism x y → SetoidMorphism x z.
 
-(* categories of sets, adjunctions *)
+(* categories of sets, functors, adjunctions *)
 Print Category.Instance.Sets.Sets.
 Require Category.Instance.Adjoints.
 Print Category.Instance.Adjoints.Adjoints.
+Print Category.Instance.Fun.Fun.
 
 Category.Instance.Sets.False_Setoid : Setoid False
 Category.Instance.Sets.proper_morphism : 
