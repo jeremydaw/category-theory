@@ -234,20 +234,27 @@ intros. simpl. rewrite id_left. rewrite id_right.
 unfold extm. rewrite fmap_comp, comp_assoc.
 rewrite join_fmap_ret. apply id_left. Qed.
 
+Definition m_3_m {C M} (H : @Monad C M) :=
+  Monad_from_3 (Monad3_from_Monad H).
+
 Lemma m_3_m_join {C M} (H : @Monad C M) x :
-  @join _ _ (Monad_from_3 (Monad3_from_Monad H)) x ≈ @join _ _ H x.
+  @join _ _ (m_3_m H) x ≈ @join _ _ H x.
 Proof. simpl. unfold extm. rewrite fmap_id. apply id_right. Qed.
 
 Lemma m_3_m_ret {C M} (H : @Monad C M) x :
-  @ret _ _ (Monad_from_3 (Monad3_from_Monad H)) x ≈ @ret _ _ H x.
+  @ret _ _ (m_3_m H) x ≈ @ret _ _ H x.
 Proof. reflexivity. Qed.
 
+(* definition of round-trip, Monad3 -> Monad -> Monad3,
+  that it is accepted shows that we get back the same object map M *)
+Definition m3_m_3 {C M} (H : @Monad3 C M) :=
+  Monad3_from_Monad (Monad_from_3 H) : @Monad3 C M.
+
 Lemma m3_m_3_ext {C M} (H : @Monad3 C M) x y (f : x ~> M y) : 
-  ext (Monad3_from_Monad (Monad_from_3 H)) f ≈ ext H f.
+  ext (m3_m_3 H) f ≈ ext H f.
 Proof. simpl. unfold extm. simpl. rewrite ext_jm. reflexivity. Qed.
 
-Lemma m3_m_3_ret3 {C M} (H : @Monad3 C M) x : 
-  @ret3 _ _ (Monad3_from_Monad (Monad_from_3 H)) x ≈ ret3 H.
+Lemma m3_m_3_ret3 {C M} (H : @Monad3 C M) x : @ret3 _ _ (m3_m_3 H) x ≈ ret3 H.
 Proof. reflexivity. Qed.
 
 (* round-trip, get back to the same monad
@@ -347,9 +354,6 @@ split ; symmetry ; assumption. Qed.
 
 Check k_adj.  Check k_adj_obligation_1.
 
-(* TODO - need to show that the monad arising from this adjunction
-  is the same one we started with *)
-
 Print Implicit Compose. (* composition of functors, "F ◯ G" := Compose F G *)
 Print Implicit adjruc.
 Print Implicit adjrucnf.
@@ -358,12 +362,6 @@ Print Implicit adjrucnf.
 Require Category.Monad.Adjunction.
 Check Category.Monad.Adjunction.Adjunction_Monad.
 
-(*
-Lemma AOW_adjr_unit_id {C D F U} (H : @Adjunction_OW C D F U) d :
-  adjr F U (transform (unitOW F U) d) ≈ id{C}.
-Proof. apply adjruc. simpl.  rewrite fmap_id. apply id_left. Qed.
-*)
-  
 Program Definition AOW_to_Monad3 {C D F U}
   (H : @Adjunction_OW C D F U) : @Monad3 D (fobj[Compose U F]) :=
   {| ret3 := transform (unitOW F U) ;
@@ -398,6 +396,22 @@ Check AOW_to_Monad3.  Check AIE_to_Monad3.
 Check AIE_to_Monad3_obligation_2.
 Check AIE_to_Monad3_obligation_3.
 Check AIE_to_Monad3_obligation_4.
+
+(* show that the monad arising from the adjunction k_adj
+  is the same one we started with *)
+(* note - that Coq accepts this definition shows that the object map
+  resulting from AIE_to_Monad3 (k_adj H) is the same as M *)
+Definition m3_k_adj_m3x {C M} (H : @Monad3 C M) :=
+  AIE_to_Monad3 (k_adj H) : @Monad3 C M.
+
+Lemma m3_k_adj_m3_ext {C M} (H : @Monad3 C M) x y :
+  ext (m3_k_adj_m3x H) ≈ @ext C M H x y.
+Proof. simpl. intros.  apply ext_respects.
+rewrite comp_assoc. rewrite m_id_r. apply id_left. Qed.
+
+Lemma m3_k_adj_m3_ret3 {C M} (H : @Monad3 C M) x :
+  ret3 (m3_k_adj_m3x H) ≈ @ret3 C M H x.
+Proof. reflexivity. Qed.
 
 (* try separate proof for Monad *)
 Program Definition AIE_to_Monad {C D F U}
@@ -535,9 +549,24 @@ Next Obligation. unfold alg_hom. split ; intro ; rewrite <- X0.
 
 Check adj_EM_obligation_1.
 
+(* the functors to and from the EM category compose to give the functor M *)
+Lemma EM_funs_M {C M} (H : @Monad C M) : fun_from_JEM H ◯ fun_to_JEM H ≈ M.
+Proof. exists (fun x => iso_id). intros. simpl.
+rewrite id_left, id_right. reflexivity. Qed.
 
-(* TODO - need to show that the monad arising from this adjunction
+Definition m_adj_EM_m {C M} (H : @Monad C M) := AIE_to_Monad (adj_EM H).
+
+(* show that the monad arising from this adjunction
   is the same one we started with *)
+
+(* this isn't accepted by Coq without the type annotation *)
+Lemma m_adj_EM_m_join {C M} H x : @join _ _ (m_adj_EM_m H) x ≈ 
+    (@join _ _ H x : fobj[M] (fobj[M] x) ~{ C }~> fobj[M] x).
+Proof. reflexivity. Qed.
+
+Lemma m_adj_EM_m_ret {C M} H x : @ret _ _ (m_adj_EM_m H) x ≈ 
+    (@ret _ _ H x : x ~{ C }~> fobj[M] x).
+Proof. reflexivity. Qed.
 
 (* Eilenberg-Moore category final among ways of factoring a monad
   as an adjoint pair of functors *)

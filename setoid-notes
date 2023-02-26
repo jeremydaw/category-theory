@@ -24,6 +24,7 @@ Check Coq.Classes.SetoidClass.Build_Setoid :
 
 Print Coq.Classes.Morphisms.Proper.
 Print Coq.Classes.CMorphisms.Proper.
+Print Coq.Classes.CMorphisms.ProperProxy.
 
 Proper {A} (R : crelation A) (m : A) = R m m
      : ∀ A : Type, crelation A → A → Type
@@ -64,7 +65,12 @@ Require Import Category.Instance.Sets.
 Print Module Category.Instance.Sets.
 Require Import Category.Instance.Fun.
 Print Module Category.Instance.Fun.
+Record SetoidObject : Type := Build_SetoidObject
+  { carrier : Type;  is_setoid : Setoid carrier }.
 Check Build_SetoidObject : ∀ carrier : Type, Setoid carrier → SetoidObject.
+Record SetoidMorphism (x : Type) (H : Setoid x) (y : Type)
+(H0 : Setoid y) : Type := Build_SetoidMorphism
+  { morphism : x → y;  proper_morphism : Proper (equiv ==> equiv) morphism }.
 Check Build_SetoidMorphism : ∀ (x : Type) (H : Setoid x)
   (y : Type) (H0 : Setoid y) (morphism : x → y),
   Proper (equiv ==> equiv) morphism → SetoidMorphism H H0
