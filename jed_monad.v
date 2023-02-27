@@ -145,8 +145,7 @@ rewrite !m_assoc. rewrite id_right. reflexivity. Qed.
 
 Lemma ext_o (H : Monad3) x y z (f : x ~{ C }~> y) (g : y ~{ C }~> M z) :
   ext H (g ∘ f) ≈ ext H g ∘ map3 H f.
-Proof. rewrite !ext_jm. rewrite Functor_from_3_obligation_3.
-apply comp_assoc. Qed.
+Proof. rewrite !ext_jm. rewrite map3_comp.  apply comp_assoc. Qed.
 
 Program Definition Monad_from_3 (H : Monad3) : @Monad C (Functor_from_3 H) := 
   {| ret := @ret3 H ; join := @join3 H |}.
@@ -673,59 +672,6 @@ Print Implicit Functor.
 Print Adjunction_IffEq.
 Print Implicit Kleisli_from_3.  
 Print Implicit AIE_to_Monad3.  
-
-(* compound monad, monad in Kleisli category of another monad *)
-(* this is the basis of the prod construction of Jones & Duponcheel *)
-
-Program Definition JD_Pext {C M} (H : @Monad3 C M) {N} 
-  (J : @Monad3 (@Kleisli_from_3 C M H) N) : @Monad3 C (Basics.compose M N) :=
-  {| ret3 := @ret3 _ _ J ; ext := fun x y f => ext H (ext J f) |}.
-
-Next Obligation.  proper. apply ext_respects.
-apply (ext_respects J). apply X. Qed.
-
-Next Obligation.  (* rewrite (m_id_r J). or rewrite m_id_r. fail here *)
-exact (m_id_r J _ _ f). Qed.
-
-Next Obligation. pose (ext_respects H). (* needed, including the H *)
-rewrite m_id_l. apply m_id_l. Qed.
-
-Next Obligation. rewrite m_assoc. apply ext_respects.
-(* apply setoid_trans. fails, why?? and rewrite (m_assoc J). fails *)
-apply (m_assoc J _ _ _ g f). Qed.
-
-Check JD_Pext.
-
-Print Implicit ext_respects.
-Print Implicit Kleisli_from_3.
-Print Implicit Monad3.
-Print Implicit ret3.
-Print Implicit m_assoc.
-Print Implicit k_adj.
-Print Implicit Adjunction_IffEq_comp.
-Print Monad3.
-Print Implicit AIE_to_Monad3.
-Check AIE_to_Monad3.
-
-(* we can prove JD_Pext using Adjunction_IffEq_comp, as
-  both monads give rise to adjunctions (using Kleisli categories),
-  compose these adjunctions, get compound monad from that,
-  however this obscures us seeing the construction *)
-Lemma JD_Pext_adj {C M} (H : @Monad3 C M) {N} 
-  (J : @Monad3 (@Kleisli_from_3 C M H) N) : @Monad3 C (Basics.compose M N).
-Proof.  pose (Adjunction_IffEq_comp (k_adj J) (k_adj H)).
-exact (AIE_to_Monad3 a). Defined.
-Check JD_Pext_adj.
-
-(* this shows the type of ext, not how it is defined *)
-Check (fun H J => ext (JD_Pext_adj H J)). 
-Check (fun H J => ext (JD_Pext H J)). 
-
-(* try to look at ext construction used in JD_Pext
-Lemma lx {C M} (H : @Monad3 C M) {N}
-  (J : @Monad3 (@Kleisli_from_3 C M H) N) : False.
-Proof. pose (fun x y => @ext C _ (JD_Pext_adj H J) x y). simpl.
-*)
 
 (* 
 Set Printing Coercions.
