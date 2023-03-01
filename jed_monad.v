@@ -147,6 +147,10 @@ Lemma ext_o (H : Monad3) x y z (f : x ~{ C }~> y) (g : y ~{ C }~> M z) :
   ext H (g ∘ f) ≈ ext H g ∘ map3 H f.
 Proof. rewrite !ext_jm. rewrite map3_comp.  apply comp_assoc. Qed.
 
+Lemma ext_map_o (H : Monad3) x y z (f : x ~{ C }~> M y) (g : y ~{ C }~> z) :
+  ext H (map3 H g ∘ f) ≈ map3 H g ∘ ext H f.
+Proof. unfold map3. symmetry. apply m_assoc. Qed.
+
 Program Definition Monad_from_3 (H : Monad3) : @Monad C (Functor_from_3 H) := 
   {| ret := @ret3 H ; join := @join3 H |}.
 Next Obligation. unfold map3. rewrite m_id_r. reflexivity. Qed.
