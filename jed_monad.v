@@ -77,10 +77,6 @@ Print Implicit fmap.
 Print Implicit ret3.
 Print Implicit compose.
 Print Implicit id.
-(*
-Print Implicit join3.
-Print Implicit map3.
-*)
 
 Check join. 
 Check morphism join. 
@@ -95,6 +91,9 @@ Print Monad3.
 
 Definition map3 (H : Monad3) {x y} (f : x ~{ C }~> y) := ext H (ret3 H ∘ f).
 Definition join3 (H : Monad3) {x} := ext H (@id _ (M x)).
+
+Print Implicit join3.
+Print Implicit map3.
 
 Lemma map3_respects (H : Monad3) (x y : obj[C]) :
   Proper (equiv ==> equiv) (@map3 H x y).
@@ -160,14 +159,49 @@ Next Obligation. unfold join3. apply m_id_r. Qed.
 Next Obligation. rewrite <- ext_jm. unfold map3. apply ext_ext. Qed.
 
 Print Implicit Monad_from_3.
-Check Monad_from_3_obligation_1.
-Check Monad_from_3_obligation_2.
+Print Implicit join3.
+Print Implicit map3.
+Print Implicit ret3.
+Print Implicit Monad_from_3_obligation_1.
+Print Implicit Monad_from_3_obligation_2.
 
 End CMo.
 
-Check Monad_from_3_obligation_3.
-Check Monad_from_3_obligation_4.
-Check Monad_from_3_obligation_5.
+Print Implicit Monad_from_3_obligation_3.
+Print Implicit Monad_from_3_obligation_4.
+Print Implicit Monad_from_3_obligation_5.
+
+Definition fmap_ret3 {C M} M3 {x y} f : ret3 M3 ∘ f ≈ map3 M3 f ∘ ret3 M3 := 
+  @Monad_from_3_obligation_1 C M M3 x y f.
+Definition join_fmap_join3 {C M} (M3 : @Monad3 C M) {x : obj[C]} :
+    join3 M3 ∘ map3 M3 (join3 M3) ≈ join3 M3 ∘ join3 M3 :=
+  @Monad_from_3_obligation_2 C M M3 x.
+Definition join_fmap_ret3 {C M} M3 {x} : join3 M3 ∘ map3 M3 (ret3 M3) ≈ id{C} :=
+  @Monad_from_3_obligation_3 C M M3 x.
+Definition join_ret3 {C M} (M3 : @Monad3 C M) {x} : join3 M3 ∘ ret3 M3 ≈ id :=
+  @Monad_from_3_obligation_4 C M M3 x.
+Definition join_fmap_fmap3 {C M} (M3 : @Monad3 C M) {x y} (f : x ~{ C }~> y) :
+    join3 M3 ∘ map3 M3 (map3 M3 f) ≈ map3 M3 f ∘ join3 M3 :=
+  @Monad_from_3_obligation_5 C M M3 x y f.
+
+Print Implicit fmap_ret3.
+Print Implicit join_fmap_join3.
+Print Implicit join_fmap_ret3.
+Print Implicit join_ret3.
+Print Implicit join_fmap_fmap3.
+
+Print Implicit fmap_ret.
+Print Implicit join_fmap_join.
+Print Implicit join_fmap_ret.
+Print Implicit join_ret.
+Print Implicit join_fmap_fmap.
+
+Print Implicit join3.
+Print Implicit ret3.
+Print Implicit join.
+Print Implicit ret.
+
+
 
 Lemma comp_o_r : ∀ C (y z : obj[C]) (f g : y ~{ C }~> z), f ≈ g → 
   ∀ x (h : x ~{ C }~> y), f ∘ h ≈ g ∘ h.

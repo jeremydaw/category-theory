@@ -51,6 +51,13 @@ Print Implicit ext.
 Definition retc x := @ret3 C M M3 _ ∘ @ret3 C N N3 x.
 Definition mapc {x y} f := map3 M3 (@map3 C N N3 x y f).
 
+(* composition of premonads is a premonad, Jones & Duponcheel, Figure 2 *)
+(* uses only fmap_ret3 *)
+Lemma premonad_comp x y (f : x ~{ C }~> y) : retc y ∘ f ≈ mapc f ∘ retc x.
+Proof. unfold retc. unfold mapc. 
+rewrite comp_assoc. rewrite <- (fmap_ret3 M3).  rewrite <- !comp_assoc.
+rewrite <- (fmap_ret3 N3).  reflexivity. Qed.
+
 (* Jones & Duponcheel, s3.2 *)
 Record JD_P : Type := 
   { prod : ∀ x : obj[C], N (M (N x)) ~{ C }~> M (N x) ;
@@ -138,6 +145,26 @@ Record JD_D : Type :=
 
 (* defining join using dorp, J&D also use this to state D4 *)
 Definition join_D (D : JD_D) x := map3 M3 (join3 N3) ∘ dorp D (N x).
+Definition ext_D (D : JD_D) {x y} (f : x ~> M (N y)) := join_D D y ∘ mapc f.
+
+Lemma ext_D_respects (D : JD_D) (x y : obj[C]) :
+  Proper (equiv ==> equiv) (@ext_D D x y).
+Proof. proper. unfold ext_D.  apply comp_o_l.
+apply map3_respects. apply map3_respects. apply X. Qed.
+
+Print Implicit ret3.
+
+(* this is equivalent to J(2) in that it says mapM joinN is ext _ *)
+Lemma D_mapM_joinN (D : JD_D) (x : obj[C]) : 
+  ext_D D (@ret3 C M M3 (N x)) ≈ map3 M3 (join3 N3).
+Proof. unfold ext_D. unfold join_D. rewrite <- comp_assoc.
+rewrite D3. apply id_right. Qed.
+
+Lemma D_ext_mapM_unitN (D : JD_D) x : ext_D D (map3 M3 (ret3 N3)) ≈ dorp D x.
+Proof. unfold ext_D. unfold join_D. rewrite <- comp_assoc.
+rewrite D1. rewrite comp_assoc. unfold mapc.
+rewrite <- map3_comp. pose (map3_respects M3). rewrite join_fmap_ret3.
+rewrite map3_id.  apply id_left. Qed.
 
 (* obtaining dorp or prod from swap *)
 (* Jones & Duponcheel, Figure 6 *)
@@ -157,37 +184,30 @@ rewrite <- e.  rewrite ext_o.  apply comp_assoc. Qed.
 (* Jones & Duponcheel, Figure 3 *)
 Program Definition P_to_7 (P : JD_P) := {| ret := retc ; join := join_P P |} : 
   Monad (Compose (Functor_from_3 M3) (Functor_from_3 N3)).
-(* first one is just composition of premonads is a premonad,
-  Jones & Duponcheel, Figure 2 *)
-Next Obligation.  unfold retc. rewrite comp_assoc.
-rewrite <- (jed_monad.Monad_from_3_obligation_1 M3).
-rewrite <- !comp_assoc.
-rewrite <- (jed_monad.Monad_from_3_obligation_1 N3).
-reflexivity. Qed.
+Next Obligation.  apply premonad_comp. Qed.
 Next Obligation. unfold join_P.  rewrite <- ext_o.
 rewrite m_assoc.  apply ext_respects.  apply P4. Qed.
 Next Obligation. unfold join_P.  rewrite <- ext_o.
 pose (ext_respects M3).  rewrite P3. apply m_id_l.  Qed.
 Next Obligation. unfold join_P. unfold retc.  rewrite comp_assoc.
 rewrite m_id_r. apply P2. Qed.
-Next Obligation. unfold join_P.  rewrite <- ext_o.
-pose (ext_respects M3).   
-pose (P1 P).  unfold mapc in e. rewrite e.  apply ext_map_o. Qed.
+Next Obligation. unfold join_P.  rewrite <- ext_o.  pose (ext_respects M3).   
+fold (mapc f). rewrite (P1 P).  apply ext_map_o. Qed.
 
 Print Implicit Functor_from_3.
 Print Implicit Compose.
 Print Implicit D3.
 Print Implicit comp_o_r.
 
+(* tried this, seemed as though it might be easier, but seems not
+Program Definition D_to_3 (D : JD_D) : @Monad3 C (Basics.compose M N) :=
+  {| ret3 := retc ; ext := fun x y => ext_D D |}.
+  *)
+
 (* Jones & Duponcheel, Figure 4 *)
 Program Definition D_to_7 (D : JD_D) := {| ret := retc ; join := join_D D |} : 
   Monad (Compose (Functor_from_3 M3) (Functor_from_3 N3)).
-Next Obligation. (* duplicates proof of P_to_7_obligation_1 *)
-unfold retc. rewrite comp_assoc.
-rewrite <- (jed_monad.Monad_from_3_obligation_1 M3).
-rewrite <- !comp_assoc.
-rewrite <- (jed_monad.Monad_from_3_obligation_1 N3).
-reflexivity. Qed.
+Next Obligation.  apply premonad_comp. Qed.
 Next Obligation.  unfold join_D. rewrite <- !comp_assoc.
 pose (D4 D (N x)). rewrite <- !comp_assoc in e. rewrite e.
 pose (map3_respects M3).  rewrite !map3_comp.
@@ -196,25 +216,20 @@ rewrite <- comp_assoc. pose (D1 D).
 unfold mapc in e0.  rewrite e0.
 rewrite comp_assoc.  apply comp_o_r.
 rewrite <- !map3_comp.  apply map3_respects.
-apply jed_monad.Monad_from_3_obligation_2. Qed.
-Next Obligation.  unfold join_D. rewrite <- comp_assoc.
-unfold retc. pose (map3_respects M3). rewrite !map3_comp.
-assert (∀ (x x0 : obj[C]) (h : x0 ~{ C }~> M (N x)),
-     dorp D x ∘ (mapc (ret3 M3) ∘ h) ≈ id{C} ∘ h).
-- intros. unfold mapc. rewrite comp_assoc. rewrite D3. reflexivity.
-- rewrite X.  rewrite id_left. rewrite <- map3_comp.
-rewrite (jed_monad.Monad_from_3_obligation_3 N3).
-apply map3_id. Qed.
+apply join_fmap_join3. Qed.
+Next Obligation.  unfold retc. pose (map3_respects M3). rewrite !map3_comp.
+rewrite comp_assoc. pose D_mapM_joinN. unfold ext_D in e. rewrite e.
+rewrite <- map3_comp.  rewrite (join_fmap_ret3 N3).  apply map3_id. Qed.
 Next Obligation.  unfold join_D. rewrite <- comp_assoc.
 rewrite D2. rewrite <- map3_comp.
-pose (map3_respects M3).
-rewrite (jed_monad.Monad_from_3_obligation_4 N3).
-apply map3_id. Qed.
+pose (map3_respects M3).  rewrite (join_ret3 N3).  apply map3_id. Qed.
 Next Obligation.  unfold join_D. rewrite <- comp_assoc.
-pose (D1 D). unfold mapc in e. rewrite e.
+rewrite (D1 D _ _ (map3 N3 f)).
 rewrite !comp_assoc. apply comp_o_r.
-rewrite <- !map3_comp. apply (map3_respects M3).
-apply jed_monad.Monad_from_3_obligation_5. Qed.
+unfold mapc. rewrite <- !map3_comp.
+apply (map3_respects M3).  apply join_fmap_fmap3. Qed.
+
+Check D_to_7_obligation_3.
 
 (* Jones & Duponcheel, Figure 5 *)
 Program Definition S_to_P (S : JD_S) := {| prod := prod_S S |} : JD_P.
@@ -222,7 +237,7 @@ Next Obligation. unfold prod_S. unfold mapc.
 rewrite <- !comp_assoc. rewrite S1. 
 rewrite !comp_assoc. apply comp_o_r.
 unfold mapc. rewrite <- !map3_comp.  apply map3_respects.
-apply jed_monad.Monad_from_3_obligation_5. (* join_fmap_fmap *) Qed.
+apply join_fmap_fmap3. Qed.
 Next Obligation. unfold prod_S. rewrite <- comp_assoc.
 rewrite S2. rewrite <- map3_comp.
 unfold join3.  pose (map3_respects M3). rewrite m_id_r.
@@ -233,11 +248,8 @@ pose (comp_o_r _ _ _ _ _ (S3 S (N x))).
 pose (e _ (map3 N3 (ret3 N3))).
 rewrite <- comp_assoc. 
 rewrite <- comp_assoc in e0.  rewrite e0.
-rewrite comp_assoc.
-rewrite <- (jed_monad.Monad_from_3_obligation_1 M3).
-rewrite <- comp_assoc.
-rewrite (jed_monad.Monad_from_3_obligation_3 N3).
-apply id_right. Qed.
+rewrite comp_assoc.  rewrite <- (fmap_ret3 M3).  rewrite <- comp_assoc.
+rewrite (join_fmap_ret3 N3).  apply id_right. Qed.
 Next Obligation. unfold prod_S. 
 (* why doesn't rewrite ext_map_o work here ?? *)
 pose (ext_respects M3).  pose (map3_respects M3).
@@ -251,7 +263,7 @@ rewrite map3_comp.  rewrite !comp_assoc.  apply comp_o_r.
 rewrite <- !comp_assoc.  rewrite S1.
 rewrite !comp_assoc.  apply comp_o_r.
 unfold mapc.  rewrite <- !map3_comp.  apply map3_respects.
-apply (jed_monad.Monad_from_3_obligation_2 N3). Qed.
+apply (join_fmap_join3 N3). Qed.
 
 (* 
 Set Printing Coercions.
@@ -268,8 +280,7 @@ Program Definition JD_P_NK (P : JD_P) : @Monad3 (@Kleisli_from_3 C M M3) N :=
     ext := fun (x y : obj[C]) (f : x ~> M (N y)) => pext_P P f |}.
 Next Obligation. proper. apply pext_P_respects.  rewrite X. reflexivity. Qed.
 Next Obligation. rewrite comp_assoc.  rewrite m_id_r.
-unfold pext_P. rewrite <- comp_assoc.
-rewrite <- (jed_monad.Monad_from_3_obligation_1 N3).
+unfold pext_P. rewrite <- comp_assoc.  rewrite <- (fmap_ret3 N3).
 rewrite comp_assoc.  rewrite P2.  apply id_left. Qed.
 Next Obligation. apply P3. Qed.
 Next Obligation.  pose (map3_respects N3).  unfold pext_P. rewrite !ext_o.
@@ -332,6 +343,8 @@ Lemma MinK_J1 {C M} (H : @Monad3 C M) {N}
   ext H (join3 (MinK_comp H J)) ≈ @join3 _ _ (MinK_comp H J) x ∘ join3 H.
 Proof. simpl. apply ext_ext. Qed.
 
+(* the prod or pext construction gives an associativity result between 
+  the composition in C and that in the Kleisli category of M *)
 Lemma MinK_omo {C M} (H : @Monad3 C M) {N} 
   (J : @Monad3 (@Kleisli_from_3 C M H) N) x y z w 
   (f : z ~{ C }~> M w) (g : y ~{ C }~> M z) (h : x ~{ C }~> y) : 
@@ -356,13 +369,13 @@ Print Implicit JD_Pext.
 
 (* monad in Kleisli category of another monad, implies Pext rules *)
 (* or does it?? maybe it requires the J1 condition
-Program Definition MinK_Pext {C M} (M3 : @Monad3 C M) {N} (N3 : @Monad3 C N)
+Program Definition MinK_Pext {C M N} (M3 : @Monad3 C M) (N3 : @Monad3 C N)
   (J : @Monad3 (@Kleisli_from_3 C M M3) N) : JD_Pext M3 N3 :=
   {| pext := fun x y (f : x ~> M (N y)) => ext J f |}.
 Next Obligation.  proper.  apply (ext_respects J). apply X. Qed.
 Next Obligation.  rewrite !m_id_r. what to do now
 
-Program Definition MinK_P {C M} (M3 : @Monad3 C M) {N} (N3 : @Monad3 C N)
+Program Definition MinK_P {C M N} (M3 : @Monad3 C M) (N3 : @Monad3 C N)
   (J : @Monad3 (@Kleisli_from_3 C M M3) N) : JD_P M3 N3 :=
   {| prod := fun x => ext J (@id C (M (N x))) |}.
 Next Obligation.  proper.  apply (ext_respects J). apply X. Qed.
@@ -393,3 +406,6 @@ Check MinK_comp_adj.
 Check (fun H J => ext (MinK_comp_adj H J)). 
 Check (fun H J => ext (MinK_comp H J)). 
 
+Print Implicit ext_D.
+Print Implicit join3.
+Print Implicit ret3.
