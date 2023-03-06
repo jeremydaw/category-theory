@@ -3,6 +3,8 @@
 coqtop -color no -R /home/jeremy/coq/category-theory Category
 Load jed_monad.
 coqc -R /home/jeremy/coq/category-theory Category jed_monad.v
+cat jed_monad.v - | coqtop -color no -R /home/jeremy/coq/category-theory Category
+
 *)
 
 Require Import Category.Lib. (* needed for notation *)
@@ -36,22 +38,22 @@ Print Category.Theory.Monad.Monad.
 Print Adjunction.
 
 (* this is the definition, in the Monad, of ext as used in Monad3 *)
-Definition extm {C M} (H : @Monad C M) x y (f : x ~> M y) := 
+Definition extm {C M} (H : @Monad C M) {x y} (f : x ~> M y) := 
   @join C M H _ ∘ fmap[M] f : M x ~> M y.
   
 Lemma extm_respects {C M} (H : @Monad C M) x y :
-  Proper (equiv ==> equiv) (extm H x y).
+  Proper (equiv ==> equiv) (@extm _ _ H x y).
 Proof. proper. unfold extm. apply compose_respects.
 - reflexivity.  - rewrite X. reflexivity. Qed.
 
 (* defining join and fmap[M] from it as used in Monad_from_3 below
   gives back the original join and fmap[M] *)
 
-Lemma join_ext_id {C M} (H : @Monad C M) x : @join C M H x ≈ extm H _ x id.
+Lemma join_ext_id {C M} (H : @Monad C M) x : @join C M H x ≈ extm H id.
 Proof. unfold extm. rewrite fmap_id, id_right. reflexivity. Qed.
 
 Lemma map_ext_uo {C M} (H : @Monad C M) x y (f : x ~> y) :
-  fmap[M] f ≈ extm H x y (ret[M] ∘ f).
+  fmap[M] f ≈ extm H (ret[M] ∘ f).
 Proof. unfold extm. rewrite fmap_comp, comp_assoc.
   rewrite join_fmap_ret.  rewrite id_left.  reflexivity. Qed.
 
@@ -150,6 +152,13 @@ Lemma ext_map_o (H : Monad3) x y z (f : x ~{ C }~> M y) (g : y ~{ C }~> z) :
   ext H (map3 H g ∘ f) ≈ map3 H g ∘ ext H f.
 Proof. unfold map3. symmetry. apply m_assoc. Qed.
 
+Lemma ext_join_imp (H : Monad3) x y (g : M x ~{ C }~> M (M y)) :
+  ext H g ≈ g ∘ join3 H -> g ≈ ext H (g ∘ ret3 H).
+Proof. unfold join3. intro. pose ext_respects.
+rewrite ext_o. rewrite X. rewrite <- comp_assoc. 
+rewrite <- ext_o. rewrite id_left.  rewrite m_id_l.
+rewrite id_right. reflexivity. Qed.
+
 Program Definition Monad_from_3 (H : Monad3) : @Monad C (Functor_from_3 H) := 
   {| ret := @ret3 H ; join := @join3 H |}.
 Next Obligation. unfold map3. rewrite m_id_r. reflexivity. Qed.
@@ -245,7 +254,7 @@ apply comp_o_r.  rewrite <- !comp_assoc.
 rewrite join_fmap_fmap.  reflexivity. Qed.
 
 Program Definition Monad3_from_Monad {C M} (H : @Monad C M) : @Monad3 C fobj := 
-  {| ret3 := fun x => ret ; ext := extm H|}.
+  {| ret3 := fun x => ret ; ext := @extm _ _ H |}.
 Next Obligation. proper. pose extm_respects. rewrite X. reflexivity. Qed.
 Next Obligation. unfold extm.  rewrite <- comp_assoc, <- fmap_ret.
 rewrite comp_assoc, join_ret. apply id_left. Qed.
