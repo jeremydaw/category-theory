@@ -57,11 +57,11 @@ Lemma map_ext_uo {C M} (H : @Monad C M) {x y} (f : x ~> y) :
 Proof. unfold extm. rewrite fmap_comp, comp_assoc.
   rewrite join_fmap_ret.  rewrite id_left.  reflexivity. Qed.
 
-Lemma ext_o_m {C M} (H : @Monad C M) {x y z} (f : x ~> y) (g : y ~> M z) :
+Lemma ext_o_m {C M} (H : @Monad C M) [x y z] (f : x ~> y) (g : y ~> M z) :
   extm H (g ∘ f) ≈ extm H g ∘ fmap[M] f.
 Proof. unfold extm. rewrite fmap_comp. apply comp_assoc. Qed.
 
-Lemma ext_map_o_m {C M} (H : @Monad C M) {x y z}
+Lemma ext_map_o_m {C M} (H : @Monad C M) [x y z]
   (f : x ~{ C }~> M y) (g : y ~{ C }~> z) :
   extm H (fmap[M] g ∘ f) ≈ fmap[M] g ∘ extm H f.
 Proof. unfold extm.  rewrite fmap_comp. rewrite comp_assoc.

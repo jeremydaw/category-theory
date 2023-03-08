@@ -70,9 +70,17 @@ Proof. proper.  unfold mapc.  apply (map3_respects M3).
 apply (map3_respects N3). exact X. Qed.
 
 (* MNf is functor, MNo is object map *)
+(* not used any more, as we got a type error 
+... has type "Monad (Functor_from_3 M3 ◯ Functor_from_3 N3)"
+while it is expected to have type "Monad MNf". 
 Program Definition MNf : Functor := {| fobj := MNo ; fmap := @mapc ;
   fmap_id := @mapc_id ; fmap_comp := @mapc_comp ;
   fmap_respects := @mapc_respects |}.
+*)
+
+Definition MNf : Functor := (Functor_from_3 M3 ◯ Functor_from_3 N3).
+Definition MNf_fobj x : fobj[MNf] x = MNo x := eq_refl.
+Definition MNf_fmap [x y] (f : x ~> y) : fmap[MNf] f = mapc f := eq_refl.
 
 (* composition of premonads is a premonad, Jones & Duponcheel, Figure 2 *)
 (* uses only fmap_ret3 *)
@@ -143,6 +151,16 @@ Next Obligation. pose (map3_respects N3). rewrite ext_o.
 rewrite map3_comp. rewrite comp_assoc. rewrite P4.
 rewrite map3_id, id_right. rewrite <- !comp_assoc.
 apply comp_o_l. apply P1. Qed.
+
+Program Definition JD_Pext_P (Pext : JD_Pext) : JD_P :=
+  {| prod := fun x => pext Pext id |}.
+Next Obligation. rewrite <- Pext1.  rewrite <- pext_o.
+ pose pext_respects.  rewrite id_left.  reflexivity. Qed.
+Next Obligation.  apply Pext2. Qed.
+Next Obligation. rewrite <- pext_o. pose pext_respects.  
+  rewrite id_left.  apply Pext3. Qed.
+Next Obligation.  rewrite <- pext_o. pose pext_respects.  
+  rewrite id_left.  apply Pext4. Qed.
 
 (* P1 to P4 give monad in Kleisli category of M *)
 Program Definition JD_P_NK (P : JD_P) : @Monad3 (@Kleisli_from_3 C M M3) N :=
@@ -332,12 +350,44 @@ Program Definition P_to_7 (P : JD_P) := {| ret := retc ; join := join_P P |} :
   Monad (Compose (Functor_from_3 M3) (Functor_from_3 N3)).
 Next Obligation.  apply premonad_comp. Qed.
 Next Obligation. unfold join_P.  rewrite <- ext_o.
+
+  (*
+
+  @equiv _ (@homset C (M (N (M (N (M (N x)))))) (M (N x)))
+    (@compose C (M (N (M (N (M (N x)))))) (M (N (M (N x))))
+       (M (N x)) (@ext _ _ M3 (N (M (N x))) (N x) (prod P x))
+       (@map3 C M M3 (N (M (N (M (N x))))) (N (M (N x)))
+          (@map3 C N N3 (M (N (M (N x)))) (M (N x))
+             (@ext _ _ M3 (N (M (N x))) (N x) (prod P x)))))
+    (@compose C (M (N (M (N (M (N x)))))) (M (N (M (N x))))
+       (M (N x)) (@ext _ _ M3 (N (M (N x))) (N x) (prod P x))
+       (@ext _ _ M3 (N (M (N (M (N x))))) (N (M (N x))) (prod P (M (N x)))))
+
+*)
+
 rewrite m_assoc.  apply ext_respects.  apply P4. Qed.
 Next Obligation. unfold join_P.  rewrite <- ext_o.
 pose (ext_respects M3).  rewrite P3. apply m_id_l.  Qed.
 Next Obligation. unfold join_P. unfold retc.  rewrite comp_assoc.
 rewrite m_id_r. apply P2. Qed.
 Next Obligation. unfold join_P.  rewrite <- ext_o.  pose (ext_respects M3).   
+fold (mapc f). rewrite (P1 P).  apply ext_map_o. Qed.
+
+(* extraordinary difficulty equating MNf with 
+(Compose (Functor_from_3 M3) (Functor_from_3 N3)) ;
+  for some reason Print MNf shows MNo and mapc *)
+Program Definition P_to_7' (P : JD_P) := {| ret := retc ; join := join_P P |} : 
+  Monad MNf.
+Next Obligation.  apply premonad_comp. Qed.
+Next Obligation. unfold join_P.  unfold MNo. unfold mapc.
+rewrite <- (ext_o M3).  rewrite m_assoc.
+apply ext_respects.  apply P4. Qed.
+Next Obligation. unfold join_P. unfold MNo. unfold mapc. rewrite <- ext_o.
+pose (ext_respects M3).  rewrite P3. apply m_id_l.  Qed.
+Next Obligation. unfold join_P. unfold retc.  rewrite comp_assoc.
+unfold MNo. rewrite m_id_r. apply P2. Qed.
+Next Obligation. unfold join_P. unfold MNo. unfold mapc.
+rewrite <- ext_o.  pose (ext_respects M3).   
 fold (mapc f). rewrite (P1 P).  apply ext_map_o. Qed.
 
 Print Implicit Functor_from_3.
@@ -486,13 +536,27 @@ Definition pext_MN (MN3 : @Monad3 C MN) {x y} (f : x ~> MN y) :=
 Definition dorp_MN (MN3 : @Monad3 C MN) x :=
   ext MN3 (map3 M3 (@ret3 _ _ N3 x)).
 *)
-Definition pext_MN (MN : @Monad C MNf) {x y} (f : x ~> MNo y) :=
+Definition pext_MN (MN : @Monad C MNf) [x y] (f : x ~> MNo y) :=
   extm MN f ∘ ret3 M3. 
 Definition dorp_MN (MN : @Monad C MNf) x :=
   extm MN (map3 M3 (@ret3 _ _ N3 x)).
 
+(* round-trip lemmas, compound monad <-> dorp/prod *)
+
+Print join_P.
+Print join_D.
+Print ext_P.
+Print ext_D.
+
 Print Implicit
 extm.
+
+(* note - to match types often need these: unfold MNo. unfold mapc. 
+  apparently somehow these come from the functor MNf (do Print MNf.) *)
+Lemma p_e_p (P : JD_P) [x y] (f : x ~{ C }~> M (N y)) : 
+  pext_MN (P_to_7' P) f ≈ pext_P P f.
+Proof. unfold pext_MN. unfold extm. simpl. unfold join_P.
+unfold MNo. unfold mapc.  rewrite <- (ext_o M3).  apply m_id_r. Qed.
 
 (* TO LOOK AT - why do we need J(1) condition, paper says not *)
 Program Definition MN_to_Pext (MN : @Monad C MNf) 
@@ -505,8 +569,8 @@ Next Obligation. unfold pext_MN. unfold extm.  rewrite fmap_comp.
 rewrite <- !comp_assoc. apply comp_o_l. apply comp_o_l.
 simpl. unfold mapc. symmetry. apply (fmap_ret3 M3). Qed.
 Next Obligation. unfold pext_MN. unfold extm. simpl.
-rewrite mapc_id. rewrite id_right. rewrite comp_assoc.
-apply comp_o_r. apply (@join_fmap_fmap _ _ MN). Qed.
+pose (map3_respects M3).  rewrite !map3_id. rewrite id_right.
+rewrite comp_assoc.  apply comp_o_r. apply (@join_fmap_fmap _ _ MN). Qed.
 Next Obligation. unfold pext_MN. 
 pose (m_id_r (Monad3_from_Monad MN) _ _ f).  simpl in e.
 rewrite retc_eq in e. rewrite <- comp_assoc. exact e. Qed.
@@ -521,20 +585,73 @@ apply comp_assoc_sym. Qed.
 Print Implicit
 Build_Monad.
 
-(*
-  
+Lemma e_p_e (MN : @Monad C MNf) 
+  (j1e : forall x y f, J1g M3 (@extm _ _ MN x y f))
+  (retc_eq : forall x, @ret _ _ MN x ≈ retc x) y :
+  join_P (JD_Pext_P (MN_to_Pext MN j1e retc_eq)) y ≈ @join _ _ MN y.
+Proof. unfold join_P. simpl. unfold pext_MN.
+rewrite <- (J1g_char M3 _ (j1e _ _ id[MNo y])).
+unfold extm.  rewrite fmap_id.  apply id_right. Qed.
+
+Lemma j2e_mjd (MN : @Monad C MNf) 
+  (j2e : forall x, extm MN (ret3 M3) ≈ map3 M3 (@join3 _ _ N3 x)) y :
+  map3 M3 (join3 N3) ∘ dorp_MN MN (N y) ≈ extm MN id.
+Proof. unfold dorp_MN. rewrite <- !j2e.
+pose (m_assoc (Monad3_from_Monad MN)).
+simpl in e. simpl. unfold MNo. unfold MNo in e. rewrite e. (* why ?? *)
+apply (extm_respects MN). rewrite j2e.  rewrite <- (map3_comp M3).
+pose (map3_respects M3). rewrite join_ret3. apply (map3_id M3). Qed.
+
+(* 
+Set Printing Coercions.
+Set Printing Implicit.
+Set Printing Notations.
+Unset Printing Coercions.
+Unset Printing Implicit.
+Unset Printing Notations.
+*)
+
+(* TO LOOK AT - why do we need J(2) condition, paper says not *)
+(* note - previously Print MNf gave functor referring to MNo, mapc,
+  now gives it as Functor_from_3 M3 ◯ Functor_from_3 N3 ;
+  need to change the proof accordingly *)  
 Program Definition MN_to_D (MN : @Monad C MNf) 
   (j2e : forall x, extm MN (ret3 M3) ≈ map3 M3 (@join3 _ _ N3 x)) 
   (retc_eq : forall x, @ret _ _ MN x ≈ retc x) : JD_D :=
   {| dorp := @dorp_MN MN |}.
 Next Obligation. unfold dorp_MN. 
-pose (ext_o (Monad3_from_Monad MN)).  
-pose (fun z => e x y z f).
-rewrite (map3_mf3 MN f) in e.
-rewrite <- (ext_o (Monad3_from_Monad MN)).  simpl.
-  xxx
-
+(* need these lines or following two depending on what Print MNf. gives 
+  and similarly further down
+pose (ext_o_m MN). simpl in e. unfold MNo in e. rewrite <- e.
+pose (ext_map_o_m MN).  simpl in e0. unfold MNo in e0. rewrite <- e0.
 *)
+pose (ext_o_m MN). simpl in e. unfold mapc. rewrite <- e.
+pose (ext_map_o_m MN).  simpl in e0. rewrite <- e0.
+apply (extm_respects MN). unfold mapc. 
+rewrite <- !(map3_comp M3).
+apply (map3_respects M3).  apply fmap_ret3. Qed.
+
+Next Obligation. unfold dorp_MN. 
+rewrite <- retc_eq. apply (m_id_r (Monad3_from_Monad MN)).  Qed.
+
+Next Obligation. unfold dorp_MN. 
+(* pose (ext_o_m MN). simpl in e. unfold MNo in e. rewrite <- e.  *)
+pose (ext_o_m MN). simpl in e. unfold mapc. rewrite <- e.
+pose (extm_respects MN).  rewrite <- (fmap_ret3 M3).
+rewrite <- (retc_eq x).  apply (m_id_l (Monad3_from_Monad MN)).  Qed.
+
+Next Obligation. unfold dorp_MN. 
+rewrite (j2e_mjd MN j2e x).  rewrite <- comp_assoc.
+rewrite (j2e_mjd MN j2e (M x)).
+pose (m_assoc (Monad3_from_Monad MN)). simpl in e. unfold MNo in e.
+rewrite e.
+(* pose (ext_o_m MN). simpl in e0. unfold MNo in e0. rewrite <- e0.  *)
+pose (ext_o_m MN). simpl in e0. unfold mapc. rewrite <- e0.
+apply (extm_respects MN). rewrite id_left.  apply id_right. Qed.
+
+Print Implicit fmap_ret3.
+Print Implicit ret3.
+
 (* TODO defining swap from join/ext via dorp or via prod is the same *)
 (* TODO - roundtrip lemmas *)
 
