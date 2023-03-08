@@ -52,10 +52,20 @@ Proof. proper. unfold extm. apply compose_respects.
 Lemma join_ext_id {C M} (H : @Monad C M) x : @join C M H x ≈ extm H id.
 Proof. unfold extm. rewrite fmap_id, id_right. reflexivity. Qed.
 
-Lemma map_ext_uo {C M} (H : @Monad C M) x y (f : x ~> y) :
+Lemma map_ext_uo {C M} (H : @Monad C M) {x y} (f : x ~> y) :
   fmap[M] f ≈ extm H (ret[M] ∘ f).
 Proof. unfold extm. rewrite fmap_comp, comp_assoc.
   rewrite join_fmap_ret.  rewrite id_left.  reflexivity. Qed.
+
+Lemma ext_o_m {C M} (H : @Monad C M) {x y z} (f : x ~> y) (g : y ~> M z) :
+  extm H (g ∘ f) ≈ extm H g ∘ fmap[M] f.
+Proof. unfold extm. rewrite fmap_comp. apply comp_assoc. Qed.
+
+Lemma ext_map_o_m {C M} (H : @Monad C M) {x y z}
+  (f : x ~{ C }~> M y) (g : y ~{ C }~> z) :
+  extm H (fmap[M] g ∘ f) ≈ fmap[M] g ∘ extm H f.
+Proof. unfold extm.  rewrite fmap_comp. rewrite comp_assoc.
+rewrite join_fmap_fmap. apply comp_assoc_sym. Qed.
 
 Section CMo. (* category C and object map M *)
 
@@ -134,24 +144,43 @@ Print Implicit ext_respects.
 
 (* note that as this corresponds to how we define ext in Monad_to_3 below,
   the two transformations are mutually inverse *)
-Lemma ext_jm (H : Monad3) x y (f : x ~{ C }~> M y) :
+Lemma ext_jm (H : Monad3) {x y} (f : x ~{ C }~> M y) :
   ext H f ≈ join3 H ∘ map3 H f.
 Proof. unfold join3. unfold map3. pose ext_respects.
 rewrite !m_assoc, comp_assoc, m_id_r, id_left. reflexivity. Qed.
 
-Lemma ext_ext (H : Monad3) x y (f : x ~{ C }~> (M y)) :
+Lemma ext_ext (H : Monad3) {x y} (f : x ~{ C }~> (M y)) :
   ext H (ext H f) ≈ ext H f ∘ join3 H.
 Proof. unfold join3. pose ext_respects.
 rewrite !m_assoc. rewrite id_right. reflexivity. Qed.
 
-Lemma ext_o (H : Monad3) x y z (f : x ~{ C }~> y) (g : y ~{ C }~> M z) :
+Lemma ext_o (H : Monad3) {x y z} (f : x ~{ C }~> y) (g : y ~{ C }~> M z) :
   ext H (g ∘ f) ≈ ext H g ∘ map3 H f.
 Proof. rewrite !ext_jm. rewrite map3_comp.  apply comp_assoc. Qed.
 
-Lemma ext_map_o (H : Monad3) x y z (f : x ~{ C }~> M y) (g : y ~{ C }~> z) :
+Lemma ext_map_o (H : Monad3) {x y z} (f : x ~{ C }~> M y) (g : y ~{ C }~> z) :
   ext H (map3 H g ∘ f) ≈ map3 H g ∘ ext H f.
 Proof. unfold map3. symmetry. apply m_assoc. Qed.
 
+Definition J1g (M3 : Monad3) {x y} (f : M x ~{ C }~> M y) :=
+  ext M3 f ≈ f ∘ join3 M3.
+
+Lemma J1g_id M3 x : J1g M3 (@id _ (M x)).
+Proof. unfold J1g. rewrite id_left. reflexivity. Qed.
+
+Lemma J1g_comp M3 {x y z} (f : M y ~{ C }~> M z) (g : M x ~{ C }~> M y) :
+  J1g M3 f -> J1g M3 g -> J1g M3 (f ∘ g).
+Proof. unfold J1g. intros.
+rewrite ext_o.  rewrite X.  rewrite <- !comp_assoc.
+rewrite <- ext_jm.  rewrite X0.  reflexivity. Qed.
+
+Lemma J1g_char M3 {x y} (f : M x ~{ C }~> M y) :
+J1g M3 f -> f ≈ ext M3 (f ∘ ret3 M3).
+Proof. unfold J1g. intro.  rewrite ext_o.
+rewrite X.  rewrite <- !comp_assoc.  rewrite <- ext_jm.
+rewrite m_id_l.  rewrite id_right. reflexivity. Qed.
+
+(* duplicates J1g_char - don't use *)
 Lemma ext_join_imp (H : Monad3) x y (g : M x ~{ C }~> M (M y)) :
   ext H g ≈ g ∘ join3 H -> g ≈ ext H (g ∘ ret3 H).
 Proof. unfold join3. intro. pose ext_respects.
@@ -212,12 +241,12 @@ Print Implicit ret.
 
 
 
-Lemma comp_o_r : ∀ C (y z : obj[C]) (f g : y ~{ C }~> z), f ≈ g → 
-  ∀ x (h : x ~{ C }~> y), f ∘ h ≈ g ∘ h.
+Lemma comp_o_r : ∀ C {y z : obj[C]} (f g : y ~{ C }~> z), f ≈ g → 
+  ∀ {x} (h : x ~{ C }~> y), f ∘ h ≈ g ∘ h.
 Proof. intros. apply compose_respects. - apply X. - reflexivity. Qed.
 
-Lemma comp_o_l : ∀ C (y z : obj[C]) (f g : y ~{ C }~> z), f ≈ g → 
-  ∀ x (h : z ~{ C }~> x), h ∘ f ≈ h ∘ g.
+Lemma comp_o_l : ∀ C {y z : obj[C]} (f g : y ~{ C }~> z), f ≈ g → 
+  ∀ {x} (h : z ~{ C }~> x), h ∘ f ≈ h ∘ g.
 Proof. intros. apply compose_respects. - reflexivity. - apply X. Qed.
 
 Print Implicit comp_o_l.  Print Implicit comp_o_r.
@@ -273,12 +302,18 @@ Check Monad_to_3.
 Check Monad3_from_Monad.
 
 (* round-trip, get back to the same functor *)
+Lemma m_3_m_map {C M} (H : @Monad C M) x y (f : x ~{ C }~> y) :
+  extm H (ret[M] ∘ f) ≈ fmap[M] f.
+Proof. unfold extm. rewrite fmap_comp, comp_assoc.
+rewrite join_fmap_ret. apply id_left. Qed.
+
 Lemma m_to_3_same_fun {C M} (H : @Monad C M) :
   Functor_from_3 (Monad3_from_Monad H) ≈ M.
 Proof. simpl. exists (fun x => @iso_id _ (fobj[M] x)).
-intros. simpl. rewrite id_left. rewrite id_right.
-unfold extm. rewrite fmap_comp, comp_assoc.
-rewrite join_fmap_ret. apply id_left. Qed.
+intros. simpl. rewrite id_left. rewrite id_right.  apply m_3_m_map. Qed.
+
+Definition map3_mf3 {C M} H {x y} f := @m_3_m_map C M H x y f :
+  map3 (Monad3_from_Monad H) f ≈ @fmap _ _ M x y f.
 
 Definition m_3_m {C M} (H : @Monad C M) :=
   Monad_from_3 (Monad3_from_Monad H).
