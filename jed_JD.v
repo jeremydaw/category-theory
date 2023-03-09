@@ -552,11 +552,19 @@ Print Implicit
 extm.
 
 (* note - to match types often need these: unfold MNo. unfold mapc. 
-  apparently somehow these come from the functor MNf (do Print MNf.) *)
+  apparently somehow these come from the functor MNf (do Print MNf.)
+  note - Print MNf. seems to produce variable results *)
 Lemma p_e_p (P : JD_P) [x y] (f : x ~{ C }~> M (N y)) : 
   pext_MN (P_to_7' P) f ≈ pext_P P f.
 Proof. unfold pext_MN. unfold extm. simpl. unfold join_P.
 unfold MNo. unfold mapc.  rewrite <- (ext_o M3).  apply m_id_r. Qed.
+
+Lemma d_e_d (D : JD_D) x : dorp_MN (D_to_7 D) x ≈ dorp D x.
+Proof. unfold dorp_MN. unfold extm. simpl. unfold join_D.
+rewrite <- comp_assoc.  pose D1. unfold mapc in e. rewrite e.
+rewrite comp_assoc.  rewrite <- map3_comp.
+pose (map3_respects M3).  rewrite join_fmap_ret3.
+rewrite map3_id. apply id_left. Qed.
 
 (* TO LOOK AT - why do we need J(1) condition, paper says not *)
 Program Definition MN_to_Pext (MN : @Monad C MNf) 
@@ -651,6 +659,13 @@ apply (extm_respects MN). rewrite id_left.  apply id_right. Qed.
 
 Print Implicit fmap_ret3.
 Print Implicit ret3.
+
+Lemma e_d_e (MN : @Monad C MNf) 
+  (j2e : forall x, extm MN (ret3 M3) ≈ map3 M3 (@join3 _ _ N3 x)) 
+  (retc_eq : forall x, @ret _ _ MN x ≈ retc x) y :
+  join_D (MN_to_D MN j2e retc_eq) y ≈ @join _ _ MN y.
+Proof. unfold join_D. simpl.  rewrite (j2e_mjd MN j2e y).
+unfold extm. rewrite fmap_id. apply id_right. Qed.
 
 (* TODO defining swap from join/ext via dorp or via prod is the same *)
 (* TODO - roundtrip lemmas *)
@@ -751,4 +766,3 @@ Check (fun M3 K3 => ext (MinK_comp M3 K3)).
 Print Implicit ext_D.
 Print Implicit join3.
 Print Implicit ret3.
-
