@@ -162,19 +162,19 @@ Lemma ext_map_o (H : Monad3) {x y z} (f : x ~{ C }~> M y) (g : y ~{ C }~> z) :
   ext H (map3 H g ∘ f) ≈ map3 H g ∘ ext H f.
 Proof. unfold map3. symmetry. apply m_assoc. Qed.
 
-Definition J1g (M3 : Monad3) {x y} (f : M x ~{ C }~> M y) :=
+Definition J1g (M3 : Monad3) [x y] (f : M x ~{ C }~> M y) :=
   ext M3 f ≈ f ∘ join3 M3.
 
 Lemma J1g_id M3 x : J1g M3 (@id _ (M x)).
 Proof. unfold J1g. rewrite id_left. reflexivity. Qed.
 
-Lemma J1g_comp M3 {x y z} (f : M y ~{ C }~> M z) (g : M x ~{ C }~> M y) :
+Lemma J1g_comp M3 [x y z] (f : M y ~{ C }~> M z) (g : M x ~{ C }~> M y) :
   J1g M3 f -> J1g M3 g -> J1g M3 (f ∘ g).
 Proof. unfold J1g. intros.
 rewrite ext_o.  rewrite X.  rewrite <- !comp_assoc.
 rewrite <- ext_jm.  rewrite X0.  reflexivity. Qed.
 
-Lemma J1g_char M3 {x y} (f : M x ~{ C }~> M y) :
+Lemma J1g_char M3 [x y] (f : M x ~{ C }~> M y) :
 J1g M3 f -> f ≈ ext M3 (f ∘ ret3 M3).
 Proof. unfold J1g. intro.  rewrite ext_o.
 rewrite X.  rewrite <- !comp_assoc.  rewrite <- ext_jm.

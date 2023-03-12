@@ -264,8 +264,6 @@ rewrite D1. rewrite comp_assoc. unfold mapc.
 rewrite <- map3_comp. pose (map3_respects M3). rewrite join_fmap_ret3.
 rewrite map3_id.  apply id_left. Qed.
 
-(* TODO - show relationship to J(2) condition *)
-
 Print Implicit join3.
 Print Implicit ret3.
 Print Implicit pext_P.
@@ -276,7 +274,6 @@ Print Implicit ext_ext.
 
 (* round-trip lemma for prod -> swap -> prod, condition
   related to J(2) but not involving compound monad *)
-(* TODO show how this condition is related to J(2) *)
 Lemma p_s_p' (P : JD_P)
   (j2p : forall y, @pext_P P _ y (ret3 M3) ≈ ret3 M3 ∘ join3 N3) x :
   map3 M3 (join3 N3) ∘ (pext_P P (map3 M3 (ret3 N3))) ≈ prod P x.
@@ -350,21 +347,6 @@ Program Definition P_to_7 (P : JD_P) := {| ret := retc ; join := join_P P |} :
   Monad (Compose (Functor_from_3 M3) (Functor_from_3 N3)).
 Next Obligation.  apply premonad_comp. Qed.
 Next Obligation. unfold join_P.  rewrite <- ext_o.
-
-  (*
-
-  @equiv _ (@homset C (M (N (M (N (M (N x)))))) (M (N x)))
-    (@compose C (M (N (M (N (M (N x)))))) (M (N (M (N x))))
-       (M (N x)) (@ext _ _ M3 (N (M (N x))) (N x) (prod P x))
-       (@map3 C M M3 (N (M (N (M (N x))))) (N (M (N x)))
-          (@map3 C N N3 (M (N (M (N x)))) (M (N x))
-             (@ext _ _ M3 (N (M (N x))) (N x) (prod P x)))))
-    (@compose C (M (N (M (N (M (N x)))))) (M (N (M (N x))))
-       (M (N x)) (@ext _ _ M3 (N (M (N x))) (N x) (prod P x))
-       (@ext _ _ M3 (N (M (N (M (N x))))) (N (M (N x))) (prod P (M (N x)))))
-
-*)
-
 rewrite m_assoc.  apply ext_respects.  apply P4. Qed.
 Next Obligation. unfold join_P.  rewrite <- ext_o.
 pose (ext_respects M3).  rewrite P3. apply m_id_l.  Qed.
@@ -425,7 +407,30 @@ rewrite !comp_assoc. apply comp_o_r.
 unfold mapc. rewrite <- !map3_comp.
 apply (map3_respects M3).  apply join_fmap_fmap3. Qed.
 
-(* TODO - show the compound monad satisfies J2 *)
+(* compound monad from D satisfies J2, noting J2 can be expressed using J1g *)
+Lemma D_J2 (D : JD_D) x : 
+  J1g (Monad3_from_Monad (D_to_7 D)) (map3 M3 (@join3 _ _ N3 x)).
+Proof. unfold J1g. simpl. unfold extm. simpl. unfold join_D.
+pose (map3_respects M3). rewrite !map3_id. rewrite id_right.
+rewrite <- comp_assoc.  pose D1. unfold mapc in e. rewrite e.
+rewrite !comp_assoc.  apply comp_o_r. rewrite <- !map3_comp.
+apply map3_respects. apply join_fmap_join3. Qed.
+
+(* equivalences of J(2) - equiv to conclusion of D_mapM_joinN *)
+Lemma J2_mj_eqv (MN : @Monad C MNf) 
+  (retc_eq : forall x, @ret _ _ MN x ≈ retc x) y :
+  iffT (J1g (Monad3_from_Monad MN) (map3 M3 (@join3 _ _ N3 y)))
+    (extm MN (@ret3 _ _ M3 (N y)) ≈ map3 M3 (join3 N3)).
+Proof. split.
+- intro.  rewrite (J1g_char _ _ X). simpl.
+apply (extm_respects MN).  rewrite retc_eq.  unfold retc.
+rewrite comp_assoc.  rewrite <- fmap_ret3.  rewrite <- comp_assoc.
+rewrite join_ret3.  rewrite id_right.  reflexivity.
+- intro.  unfold J1g. simpl.  pose (extm_respects MN).
+rewrite <- X.  apply (ext_ext (Monad3_from_Monad MN)). Qed.
+
+Print Implicit
+Monad3_from_Monad.
 
 Check D_to_7_obligation_3.
 
@@ -440,12 +445,9 @@ Next Obligation. unfold prod_S. rewrite <- comp_assoc.
 rewrite S2. rewrite <- map3_comp.
 unfold join3.  pose (map3_respects M3). rewrite m_id_r.
 apply map3_id. Qed.
-Next Obligation. unfold prod_S. unfold retc.
-rewrite map3_comp.
-pose (@comp_o_r _ _ _ _ _ (S3 S (N x))).
-pose (e _ (map3 N3 (ret3 N3))).
-rewrite <- comp_assoc. 
-rewrite <- comp_assoc in e0.  rewrite e0.
+Next Obligation. unfold prod_S. unfold retc.  rewrite map3_comp.
+pose (@comp_o_r _ _ _ _ _ (S3 S (N x))).  pose (e _ (map3 N3 (ret3 N3))).
+rewrite <- comp_assoc.  rewrite <- comp_assoc in e0.  rewrite e0.
 rewrite comp_assoc.  rewrite <- (fmap_ret3 M3).  rewrite <- comp_assoc.
 rewrite (join_fmap_ret3 N3).  apply id_right. Qed.
 Next Obligation. unfold prod_S. 
@@ -453,8 +455,7 @@ Next Obligation. unfold prod_S.
 pose (ext_respects M3).  pose (map3_respects M3).
 pose (ext_map_o M3 (swap S (N x)) (join3 N3)).
 pose (@comp_o_r _ _ _ _ _ e _ (map3 M3 (join3 N3) ∘ swap S (N (M (N x))))).
-rewrite e0.
-rewrite <- !comp_assoc.  pose (S4 S (N x)).
+rewrite e0.  rewrite <- !comp_assoc.  pose (S4 S (N x)).
 rewrite <- !comp_assoc in e1.  rewrite <- e1.
 pose (map3_respects N3).  rewrite (ext_map_o M3).
 rewrite map3_comp.  rewrite !comp_assoc.  apply comp_o_r.
@@ -500,13 +501,8 @@ Proof. unfold dorp_S. simpl. unfold swap_D.
 unfold J1g in j1d. rewrite ext_o. rewrite j1d.
 rewrite <- comp_assoc. rewrite join_fmap_ret3. apply id_right. Qed.
 
-Lemma s_p_s (S : JD_S) x : swap_P (S_to_P S) x ≈ swap S x.
-Proof. unfold swap_P. unfold pext_P. simpl. unfold prod_S.
-rewrite <- comp_assoc. rewrite S1.  unfold mapc.
-rewrite comp_assoc.
-rewrite <- map3_comp.
-pose (map3_respects M3).  rewrite join_fmap_ret3. 
-rewrite map3_id. apply id_left. Qed.
+Definition s_p_s' (S : JD_S) x : swap_P (S_to_P S) x ≈ swap S x :=
+  S_pext_mapM_unitN S x.
 
 Definition p_s_p P j2p x : prod_S (P_to_S P j2p) x ≈ prod P x :=
   (p_s_p' P j2p x).
@@ -541,6 +537,17 @@ Definition pext_MN (MN : @Monad C MNf) [x y] (f : x ~> MNo y) :=
 Definition dorp_MN (MN : @Monad C MNf) x :=
   extm MN (map3 M3 (@ret3 _ _ N3 x)).
 
+(* note equivalences of conditions variously labelled j2p, j2e *)
+Lemma j2p_e (P : JD_P) x
+  (j2p : @pext_P P _ x (ret3 M3) ≈ ret3 M3 ∘ join3 N3) :
+  ext M3 (@pext_P P _ x (ret3 M3)) ≈ map3 M3 (@join3 _ _ N3 x).
+Proof. pose (ext_respects M3). rewrite j2p. reflexivity. Qed.
+
+Lemma j2e_p (MN : @Monad C MNf) x
+  (j2e : extm MN (ret3 M3) ≈ map3 M3 (@join3 _ _ N3 x)) :
+  @pext_MN MN _ x (ret3 M3) ≈ ret3 M3 ∘ join3 N3.
+Proof. unfold pext_MN. rewrite j2e. symmetry. simpl. apply fmap_ret3. Qed.
+
 (* round-trip lemmas, compound monad <-> dorp/prod *)
 
 Print join_P.
@@ -559,12 +566,8 @@ Lemma p_e_p (P : JD_P) [x y] (f : x ~{ C }~> M (N y)) :
 Proof. unfold pext_MN. unfold extm. simpl. unfold join_P.
 unfold MNo. unfold mapc.  rewrite <- (ext_o M3).  apply m_id_r. Qed.
 
-Lemma d_e_d (D : JD_D) x : dorp_MN (D_to_7 D) x ≈ dorp D x.
-Proof. unfold dorp_MN. unfold extm. simpl. unfold join_D.
-rewrite <- comp_assoc.  pose D1. unfold mapc in e. rewrite e.
-rewrite comp_assoc.  rewrite <- map3_comp.
-pose (map3_respects M3).  rewrite join_fmap_ret3.
-rewrite map3_id. apply id_left. Qed.
+Definition d_e_d (D : JD_D) x : dorp_MN (D_to_7 D) x ≈ dorp D x :=
+  D_ext_mapM_unitN D x.
 
 (* TO LOOK AT - why do we need J(1) condition, paper says not *)
 Program Definition MN_to_Pext (MN : @Monad C MNf) 
@@ -667,8 +670,14 @@ Lemma e_d_e (MN : @Monad C MNf)
 Proof. unfold join_D. simpl.  rewrite (j2e_mjd MN j2e y).
 unfold extm. rewrite fmap_id. apply id_right. Qed.
 
-(* TODO defining swap from join/ext via dorp or via prod is the same *)
-(* TODO - roundtrip lemmas *)
+(* defining swap from join/ext via dorp or via prod is the same *)
+Lemma swap_DP_eq (MN : @Monad C MNf) j1e j2e retc_eq x : 
+  swap_P (JD_Pext_P (MN_to_Pext MN j1e retc_eq)) x ≈ 
+  swap_D (MN_to_D MN j2e retc_eq) x.
+Proof. unfold swap_P. unfold swap_D. unfold pext_P. simpl.
+unfold pext_MN. unfold dorp_MN. unfold extm. simpl.
+pose (map3_respects M3). rewrite !map3_id. rewrite id_right.
+rewrite <- !comp_assoc. apply comp_o_l. apply fmap_ret3. Qed.
 
 End CMN. (* more to be done, but this lets the file compile *)
 
