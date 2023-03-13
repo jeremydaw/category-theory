@@ -16,6 +16,7 @@ Require Import Category.Theory.Functor.
 Require Import Category.Theory.Monad.
 Require Import Category.Theory.Adjunction.
 Require Import Category.Monad.Kleisli.
+Require Import Category.Monad.Algebra.
 Require Import jed_adjfuns jed_monad.
 
 Generalizable All Variables.
@@ -321,7 +322,6 @@ Next Obligation. unfold swap_D.  rewrite <- comp_assoc.
 rewrite fmap_ret3. rewrite comp_assoc. rewrite D3. apply id_left. Qed.
 Next Obligation. unfold swap_D.  rewrite <- !comp_assoc.  rewrite fmap_ret3.
 unfold J1g in j1d.  pose (map3_respects M3).  pose (map3_respects N3).
-(* rewrite <- !ext_join_imp. fails *)
 assert (forall x, ext M3 (dorp D x ∘ ret3 M3) ≈ dorp D x).
 - intro.  rewrite ext_o. rewrite j1d. rewrite <- comp_assoc.
 rewrite join_fmap_ret3. apply id_right.
@@ -489,14 +489,44 @@ rewrite S1. rewrite comp_assoc. unfold mapc.
 rewrite <- map3_comp. pose (map3_respects M3). rewrite join_fmap_ret3.
 rewrite map3_id.  apply id_left. Qed.
 
+Lemma S_pext_pext (S : JD_S) [x y] (f : x ~{ C }~> M (N y)) :
+  pext_P (S_to_P S) (pext_P (S_to_P S) f) ≈ pext_P (S_to_P S) f ∘ join3 N3.
+Proof.  pose (JD_P_NK (S_to_P S)) as K3.
+pose (ext_ext K3 f) as ee. simpl in ee. rewrite ee.
+rewrite (S_unitM_joinN S). rewrite comp_assoc. 
+apply comp_o_r. apply m_id_r. Qed.
+
+Lemma pext_swap (S : JD_S) x :
+  pext_P (S_to_P S) (swap S x) ≈ swap S x ∘ join3 N3.
+Proof. pose pext_P_respects. rewrite <- !S_pext_mapM_unitN.
+apply S_pext_pext. Qed.
+
+Lemma pext_extM (S : JD_S) [x y] (f : x ~{ C }~> M (N y)) :
+  pext_P (S_to_P S) (ext M3 f) ≈ ext M3 (pext_P (S_to_P S) f) ∘ swap S x.
+Proof. rewrite <- S_pext_mapM_unitN.
+pose (JD_P_NK (S_to_P S)) as K3.
+pose (m_assoc K3) as ma. simpl in ma.  rewrite ma.
+pose pext_P_respects.  pose (ext_respects M3).  rewrite <- (ext_o M3).
+rewrite (Pext2 (JD_P_Pext (S_to_P S))).  reflexivity. Qed.
+
+Print Implicit
+ret3.
+
+Lemma dorp_swap (S : JD_S) x :
+  dorp (S_to_D S) x ∘ swap S _ ≈ swap S x ∘ map3 N3 (join3 M3).
+Proof. simpl. unfold dorp_S.  pose (ext_respects M3).
+rewrite <- S_pext_mapM_unitN.  rewrite <- pext_extM.
+pose (pext_o (JD_P_Pext (S_to_P S))) as po.  rewrite <- po.
+pose pext_respects.  pose pext_P_respects.
+rewrite <- join_fmap_fmap3.  rewrite ext_jm. reflexivity. Qed.
+
 (* round-trip lemmas *)
 (* swap_D and dorp_S are inverses one way - S_to_D uses dorp_S *)
 Lemma s_d_s (S : JD_S) x : swap_D (S_to_D S) x ≈ swap S x.
 Proof. unfold swap_D. simpl. unfold dorp_S. apply m_id_r. Qed.
 
 (* the other way requires a J1 condition *)
-Lemma d_s_d (D : JD_D) (j1d : forall y, J1g M3 (dorp D y)) x : 
-  dorp_S (D_to_S D j1d) x ≈ dorp D x.
+Lemma d_s_d (D : JD_D) j1d x : dorp_S (D_to_S D j1d) x ≈ dorp D x.
 Proof. unfold dorp_S. simpl. unfold swap_D.
 unfold J1g in j1d. rewrite ext_o. rewrite j1d.
 rewrite <- comp_assoc. rewrite join_fmap_ret3. apply id_right. Qed.
@@ -596,9 +626,7 @@ apply comp_assoc_sym. Qed.
 Print Implicit
 Build_Monad.
 
-Lemma e_p_e (MN : @Monad C MNf) 
-  (j1e : forall x y f, J1g M3 (@extm _ _ MN x y f))
-  (retc_eq : forall x, @ret _ _ MN x ≈ retc x) y :
+Lemma e_p_e (MN : @Monad C MNf) j1e retc_eq y :
   join_P (JD_Pext_P (MN_to_Pext MN j1e retc_eq)) y ≈ @join _ _ MN y.
 Proof. unfold join_P. simpl. unfold pext_MN.
 rewrite <- (J1g_char M3 _ (j1e _ _ id[MNo y])).
@@ -663,9 +691,7 @@ apply (extm_respects MN). rewrite id_left.  apply id_right. Qed.
 Print Implicit fmap_ret3.
 Print Implicit ret3.
 
-Lemma e_d_e (MN : @Monad C MNf) 
-  (j2e : forall x, extm MN (ret3 M3) ≈ map3 M3 (@join3 _ _ N3 x)) 
-  (retc_eq : forall x, @ret _ _ MN x ≈ retc x) y :
+Lemma e_d_e (MN : @Monad C MNf) j2e retc_eq y :
   join_D (MN_to_D MN j2e retc_eq) y ≈ @join _ _ MN y.
 Proof. unfold join_D. simpl.  rewrite (j2e_mjd MN j2e y).
 unfold extm. rewrite fmap_id. apply id_right. Qed.
@@ -679,6 +705,7 @@ unfold pext_MN. unfold dorp_MN. unfold extm. simpl.
 pose (map3_respects M3). rewrite !map3_id. rewrite id_right.
 rewrite <- !comp_assoc. apply comp_o_l. apply fmap_ret3. Qed.
 
+(*
 End CMN. (* more to be done, but this lets the file compile *)
 
 (* compound monad, monad in Kleisli category of another monad *)
@@ -706,8 +733,8 @@ Print Implicit ext_ext.
 (* when we have a compound monad defined in this way, it satisfies J(1) *)
 Lemma MinK_J1 {C M} (M3 : @Monad3 C M) {N} 
   (K3 : @Monad3 (@Kleisli_from_3 C M M3) N) x : 
-  ext M3 (join3 (MinK_comp M3 K3)) ≈ @join3 _ _ (MinK_comp M3 K3) x ∘ join3 M3.
-Proof. simpl. unfold MNo.  apply (ext_ext M3). Qed.
+  J1g M3 (@join3 _ _ (MinK_comp M3 K3) x).
+Proof. simpl. unfold J1g.  apply (ext_ext M3). Qed.
 
 (* the prod or pext construction gives an associativity result between 
   the composition in C and that in the Kleisli category of M *)
@@ -722,9 +749,8 @@ Proof. simpl. apply comp_assoc. Qed.
   is mapM o mapN, ie, mapc, but this depends on the monad
   in the Kleisli category being defined using pext satisfying JD_Pext,
   unlike the previous few results *)
-Lemma MinK_mapc {C M N} (M3 : @Monad3 C M) (N3 : @Monad3 C N)
-  (Pext : JD_Pext M3 N3) x y (f : x ~> y) :
-  map3 (MinK_comp (M3 : @Monad3 C M) (JD_Pext_NK M3 N3 Pext)) f ≈
+Lemma MinK_mapc {C M N} M3 N3 (Pext : JD_Pext M3 N3) [x y] (f : x ~> y) :
+  map3 (MinK_comp M3 (@JD_Pext_NK C M N M3 N3 Pext)) f ≈
   map3 M3 (map3 N3 f).
 Proof. unfold map3. simpl. pose (ext_respects M3). rewrite pext_o.
 rewrite Pext3. reflexivity. Qed.
@@ -775,3 +801,46 @@ Check (fun M3 K3 => ext (MinK_comp M3 K3)).
 Print Implicit ext_D.
 Print Implicit join3.
 Print Implicit ret3.
+Print Implicit TAlgebra.
+Print Implicit JD_P_NK.
+
+(** compound monads and algebras *)
+
+(* prod is an N-algebra (assuming JD_S) *)
+Program Definition prod_alg {C M N} M3 N3 (S : @JD_S C M N M3 N3) a :
+  @TAlgebra C _ (Monad_from_3 N3) (M (N a)) :=
+  {| t_alg := prod _ _ (S_to_P M3 N3 S) a ; 
+    t_id := P2 _ _ (S_to_P M3 N3 S) a |}.
+Next Obligation. pose (S_to_P M3 N3 S) as P.
+pose (JD_P_NK M3 N3 P) as K3.
+pose (ext_ext K3 (@id C (M (N a)))) as ee.  simpl in ee.
+unfold pext_P in ee.  
+pose (map3_respects N3).  pose (ext_respects M3).
+rewrite !map3_id in ee.  rewrite !id_right in ee.
+simpl in ee.  rewrite ee.
+pose (S_unitM_joinN M3 N3 S (M (N a))) as uj.
+unfold pext_P in uj. simpl in uj.  rewrite uj.
+rewrite comp_assoc.  apply comp_o_r.  apply m_id_r.  Qed.
+    
+(* given an N-algebra f, mapM f o swap is an N-algebra (assuming JD_S) *)
+Program Definition ms_alg {C M N} M3 N3 (S : @JD_S C M N M3 N3) a
+  (alg : @TAlgebra C _ (Monad_from_3 N3) a) :
+  @TAlgebra C _ (Monad_from_3 N3) (M a) :=
+  {| t_alg := map3 M3 (@t_alg _ _ _ _ alg) ∘ swap M3 N3 S _ |}.
+Next Obligation. rewrite <- comp_assoc. rewrite S2.
+rewrite <- map3_comp. pose (map3_respects M3).
+rewrite (@t_id _ _ _ _ alg). apply map3_id. Qed.
+Next Obligation.  rewrite map3_comp.
+pose (S1 M3 N3 S _ _ t_alg[alg]) as s1.  eapply comp_o_r in s1.
+rewrite <- !comp_assoc in s1.  rewrite <- !comp_assoc.  rewrite s1.
+rewrite !comp_assoc.  unfold mapc. rewrite <- map3_comp.
+pose (@t_action _ _ _ _ alg). simpl in e.
+pose (map3_respects M3). rewrite e.
+rewrite map3_comp.  rewrite <- !comp_assoc.  apply comp_o_l.
+simpl. rewrite <- pext_swap. unfold pext_P. simpl. 
+unfold prod_S. apply comp_assoc. Qed.
+
+(* TODO NEXT: there is a M-algebra morphism corresponding to unitM,
+  then M is a monad in the category of N-algebras *)
+*)
+

@@ -180,13 +180,14 @@ Proof. unfold J1g. intro.  rewrite ext_o.
 rewrite X.  rewrite <- !comp_assoc.  rewrite <- ext_jm.
 rewrite m_id_l.  rewrite id_right. reflexivity. Qed.
 
-(* duplicates J1g_char - don't use *)
+(* duplicates J1g_char - don't use 
 Lemma ext_join_imp (H : Monad3) x y (g : M x ~{ C }~> M (M y)) :
   ext H g ≈ g ∘ join3 H -> g ≈ ext H (g ∘ ret3 H).
 Proof. unfold join3. intro. pose ext_respects.
 rewrite ext_o. rewrite X. rewrite <- comp_assoc. 
 rewrite <- ext_o. rewrite id_left.  rewrite m_id_l.
 rewrite id_right. reflexivity. Qed.
+*)
 
 Program Definition Monad_from_3 (H : Monad3) : @Monad C (Functor_from_3 H) := 
   {| ret := @ret3 H ; join := @join3 H |}.
