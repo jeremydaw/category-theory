@@ -705,7 +705,6 @@ unfold pext_MN. unfold dorp_MN. unfold extm. simpl.
 pose (map3_respects M3). rewrite !map3_id. rewrite id_right.
 rewrite <- !comp_assoc. apply comp_o_l. apply fmap_ret3. Qed.
 
-(*
 End CMN. (* more to be done, but this lets the file compile *)
 
 (* compound monad, monad in Kleisli category of another monad *)
@@ -840,7 +839,37 @@ rewrite map3_comp.  rewrite <- !comp_assoc.  apply comp_o_l.
 simpl. rewrite <- pext_swap. unfold pext_P. simpl. 
 unfold prod_S. apply comp_assoc. Qed.
 
-(* TODO NEXT: there is a M-algebra morphism corresponding to unitM,
+(* TODO NEXT: there is a M-algebra morphisms corresponding to unitM and joinM,
   then M is a monad in the category of N-algebras *)
-*)
+
+Program Definition N_alghom_unitM {C M N} [M3 N3] (S : @JD_S C M N M3 N3) [a]
+  (alg : @TAlgebra C _ (Monad_from_3 N3) a) :
+  @TAlgebraHom C _ (Monad_from_3 N3) a (M a) alg (ms_alg _ _ S a alg) :=
+  {| t_alg_hom := ret3 M3 |}.
+Next Obligation.  rewrite <- comp_assoc. rewrite S3. apply fmap_ret3. Qed.
+
+Program Definition N_alghom_joinM {C M N} [M3 N3] (S : @JD_S C M N M3 N3) [a]
+  (alg : @TAlgebra C _ (Monad_from_3 N3) a) :
+  @TAlgebraHom C _ (Monad_from_3 N3) (M (M a)) (M a)
+    (ms_alg _ _ S _ (ms_alg _ _ S a alg)) (ms_alg _ _ S a alg) :=
+  {| t_alg_hom := join3 M3 |}.
+Next Obligation. rewrite map3_comp. rewrite !comp_assoc. 
+rewrite join_fmap_fmap3. rewrite <- !comp_assoc. apply comp_o_l.
+rewrite <- dorp_swap. unfold dorp_S.
+rewrite comp_assoc.  rewrite <- ext_jm. reflexivity. Qed.
+
+Program Definition N_alghom_mapM {C M N} [M3 N3] (S : @JD_S C M N M3 N3) [a b]
+  (alga : @TAlgebra C _ (Monad_from_3 N3) a)
+  (algb : @TAlgebra C _ (Monad_from_3 N3) b)
+  (fah : @TAlgebraHom C _ (Monad_from_3 N3) a b alga algb) :
+  @TAlgebraHom C _ (Monad_from_3 N3) (M a) (M b)
+    (ms_alg _ _ S a alga) (ms_alg _ _ S b algb) :=
+  {| t_alg_hom := map3 M3 (@t_alg_hom _ _ _ _ _ _ _ fah) |}.
+Next Obligation. rewrite <- comp_assoc. rewrite S1.
+unfold mapc. rewrite !comp_assoc. apply comp_o_r.
+rewrite <- !map3_comp. apply map3_respects.
+exact (@t_alg_hom_commutes _ _ _ _ _ alga algb fah). Qed.
+
+Print Implicit 
+TAlgebraHom.
 
