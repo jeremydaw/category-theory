@@ -197,6 +197,17 @@ Check JD_Pext_NK_obligation_2.
 Check JD_Pext_NK_obligation_3.
 Check JD_Pext_NK_obligation_4.
 
+Lemma pext_ext (Pext : JD_Pext) [x y z] 
+  (g : y ~{ C }~> M (N z)) (f : x ~{ C }~> M (N y)) :
+pext Pext (ext M3 (pext Pext g) ∘ f) ≈ ext M3 (pext Pext g) ∘ pext Pext f.
+Proof. symmetry. apply JD_Pext_NK_obligation_4. Qed.
+
+(* pext is a functor from Kleisli category of N in the Kleisli category of M
+  to the Kleisli category of M *)
+Definition pext_functor' (Pext : JD_Pext) :=
+  @ext_functor (Kleisli_from_3 M3) N (JD_Pext_NK Pext) :
+  @Functor (Kleisli_from_3 (JD_Pext_NK Pext)) (Kleisli_from_3 M3). 
+
 Print Implicit fmap.
 Print Implicit ret3.
 Print Implicit compose.
@@ -322,10 +333,8 @@ Next Obligation. unfold swap_D.  rewrite <- comp_assoc.
 rewrite fmap_ret3. rewrite comp_assoc. rewrite D3. apply id_left. Qed.
 Next Obligation. unfold swap_D.  rewrite <- !comp_assoc.  rewrite fmap_ret3.
 unfold J1g in j1d.  pose (map3_respects M3).  pose (map3_respects N3).
-assert (forall x, ext M3 (dorp D x ∘ ret3 M3) ≈ dorp D x).
-- intro.  rewrite ext_o. rewrite j1d. rewrite <- comp_assoc.
-rewrite join_fmap_ret3. apply id_right.
-- rewrite X. rewrite !comp_assoc. rewrite <- D4. reflexivity. Qed.
+rewrite <- (J1g_char _ _ (j1d x)).
+rewrite X. rewrite !comp_assoc. rewrite <- D4. reflexivity. Qed.
 
 (* obtaining dorp or prod from swap *)
 (* Jones & Duponcheel, Figure 6 *)
@@ -489,6 +498,8 @@ rewrite S1. rewrite comp_assoc. unfold mapc.
 rewrite <- map3_comp. pose (map3_respects M3). rewrite join_fmap_ret3.
 rewrite map3_id.  apply id_left. Qed.
 
+(* NB this is expressed using only pext, does it require the swap rules? 
+  probably yes, since the prod construction doesn't involve N being a monad *)
 Lemma S_pext_pext (S : JD_S) [x y] (f : x ~{ C }~> M (N y)) :
   pext_P (S_to_P S) (pext_P (S_to_P S) f) ≈ pext_P (S_to_P S) f ∘ join3 N3.
 Proof.  pose (JD_P_NK (S_to_P S)) as K3.
@@ -520,6 +531,57 @@ pose (pext_o (JD_P_Pext (S_to_P S))) as po.  rewrite <- po.
 pose pext_respects.  pose pext_P_respects.
 rewrite <- join_fmap_fmap3.  rewrite ext_jm. reflexivity. Qed.
 
+(* NB this is expressed using only dorp, does it require the swap rules? 
+  probably yes, since the dorp construction doesn't involve M being a monad *)
+Lemma dorp_dorp (S : JD_S) x : 
+  dorp (S_to_D S) x ∘ dorp (S_to_D S) _ ≈ dorp (S_to_D S) x ∘ mapc (join3 M3).
+Proof. simpl. unfold dorp_S. rewrite m_assoc. pose (ext_respects M3).
+  pose (dorp_swap S x) as ds. simpl in ds.
+  unfold dorp_S in ds.  rewrite ds.  apply ext_o. Qed.
+
+Program Definition dorp_functor (S : JD_S) : @Functor (Kleisli_from_3 M3) C :=
+  {| fobj := MNo ; fmap := fun x y f => dorp (S_to_D S) y ∘ mapc f |}.
+Next Obligation. proper. apply comp_o_l. exact (mapc_respects _ _ X). Qed.
+Next Obligation. apply (D3 (S_to_D S)). Qed.
+Next Obligation.  rewrite mapc_comp.  rewrite !comp_assoc.  apply comp_o_r.
+rewrite <- comp_assoc.  rewrite <- (D1 (S_to_D S)).  rewrite comp_assoc.
+pose (dorp_dorp S z) as dd. simpl in dd.  rewrite dd.
+rewrite <- comp_assoc.  rewrite <- mapc_comp.  apply comp_o_l.
+apply mapc_respects.  apply ext_jm. Qed.
+
+Print Implicit MNo.
+Print Implicit JD_P_NK.
+
+Definition pext_map_functor (P : JD_P) :
+  @Functor (Kleisli_from_3 M3) (Kleisli_from_3 M3) :=
+  Functor_from_3 (JD_P_NK P).
+
+Program Definition swap_functor (S : JD_S) : 
+  @Functor (Kleisli_from_3 M3) (Kleisli_from_3 M3) :=
+  {| fobj := N ; fmap := fun x y f => swap S y ∘ map3 N3 f |}.
+Next Obligation. proper. apply comp_o_l. apply map3_respects. exact X. Qed.
+Next Obligation. apply S3. Qed.
+Next Obligation.  (* trying to use pext_map_functor looks too complicated *)
+rewrite map3_comp.  rewrite !comp_assoc.  apply comp_o_r.
+rewrite ext_o.  rewrite <- comp_assoc.
+fold (mapc f).  rewrite <- (S1 S).  rewrite comp_assoc.
+pose (dorp_swap S z) as ds. simpl in ds.  rewrite ds.
+rewrite <- comp_assoc.  rewrite <- map3_comp.  apply comp_o_l.
+apply map3_respects.  apply ext_jm. Qed.
+
+(* this functor is the map of the monad N in the Kleisli category of M *)
+Lemma pext_map_swap_fun (S : JD_S) :
+  swap_functor S ≈ pext_map_functor (S_to_P S).
+Proof. simpl. (* getting right types in the following is difficult! *)
+exists (fun (x : obj[C]) => @Isomorphism.iso_id (Kleisli_from_3 M3) (N x)).
+intros. simpl. unfold pext_P. simpl. unfold prod_S.
+rewrite m_id_r.  pose (map3_respects N3). rewrite ext_o.
+rewrite !m_id_l, !id_left.
+rewrite map3_comp. rewrite !comp_assoc. apply comp_o_r.
+rewrite <- comp_assoc. rewrite (S1 S). rewrite comp_assoc.
+unfold mapc. rewrite <- map3_comp. pose (map3_respects M3).
+rewrite join_fmap_ret3. rewrite map3_id, id_left. reflexivity. Qed.
+
 (* round-trip lemmas *)
 (* swap_D and dorp_S are inverses one way - S_to_D uses dorp_S *)
 Lemma s_d_s (S : JD_S) x : swap_D (S_to_D S) x ≈ swap S x.
@@ -546,7 +608,6 @@ Unset Printing Implicit.
 Unset Printing Notations.
 *)
 
-Print Implicit ext.
 Print Implicit ret3.
 Print Implicit m_assoc.
 Print Implicit
@@ -753,9 +814,19 @@ Lemma MinK_mapc {C M N} M3 N3 (Pext : JD_Pext M3 N3) [x y] (f : x ~> y) :
   map3 M3 (map3 N3 f).
 Proof. unfold map3. simpl. pose (ext_respects M3). rewrite pext_o.
 rewrite Pext3. reflexivity. Qed.
-  
-Print Implicit map3.
+
+(* pext is a functor from the Kleisli cat of MN to the Kleisli cat of M,
+  see pext_functor' above *)
+Program Definition pext_functor {C M N} M3 N3 (Pext : @JD_Pext C M N M3 N3) :=
+  {| fobj := N ; fmap := @pext C M N M3 N3 Pext |} : 
+  @Functor (Kleisli_from_3 (MinK_comp M3 (JD_Pext_NK M3 N3 Pext)))
+  (Kleisli_from_3 M3).
+Next Obligation. proper. apply pext_respects. exact X. Qed.
+Next Obligation. apply Pext3. Qed.
+Next Obligation.  symmetry.  apply (JD_Pext_NK_obligation_4 M3 N3 Pext). Qed.
+
 Print Implicit JD_Pext_NK.
+Print Implicit MinK_comp.
 Print Implicit JD_Pext.
 
 (* monad in Kleisli category of another monad, implies Pext rules *)
@@ -806,21 +877,54 @@ Print Implicit JD_P_NK.
 (** compound monads and algebras *)
 
 (* prod is an N-algebra (assuming JD_S) *)
-Program Definition prod_alg {C M N} M3 N3 (S : @JD_S C M N M3 N3) a :
+(* TODO - can this be a functor into the JEM category for N,
+  and thereby give a compound monad (from two adjoint functors) ? *)
+Program Definition prod_is_alg {C M N} M3 N3 (S : @JD_S C M N M3 N3) a :
   @TAlgebra C _ (Monad_from_3 N3) (M (N a)) :=
   {| t_alg := prod _ _ (S_to_P M3 N3 S) a ; 
     t_id := P2 _ _ (S_to_P M3 N3 S) a |}.
 Next Obligation. pose (S_to_P M3 N3 S) as P.
 pose (JD_P_NK M3 N3 P) as K3.
 pose (ext_ext K3 (@id C (M (N a)))) as ee.  simpl in ee.
-unfold pext_P in ee.  
-pose (map3_respects N3).  pose (ext_respects M3).
-rewrite !map3_id in ee.  rewrite !id_right in ee.
-simpl in ee.  rewrite ee.
+unfold pext_P in ee.  pose (map3_respects N3).  pose (ext_respects M3).
+rewrite !map3_id, !id_right in ee.  simpl in ee.  rewrite ee.
 pose (S_unitM_joinN M3 N3 S (M (N a))) as uj.
 unfold pext_P in uj. simpl in uj.  rewrite uj.
 rewrite comp_assoc.  apply comp_o_r.  apply m_id_r.  Qed.
     
+Definition prod_is_ex_alg {C M N} M3 N3 S a : ∃ y, @TAlgebra C _ _ y :=
+existT (@TAlgebra C _ _) (M (N a)) (prod_is_alg M3 N3 S a).
+
+Program Definition prod_alg_arr {C M N} M3 N3 (S : @JD_S C M N M3 N3) x y 
+  (arr : @hom C x y) :
+  @TAlgebraHom C _ _ _ _ (prod_is_alg M3 N3 S x) (prod_is_alg M3 N3 S y) :=
+  {| t_alg_hom := mapc M3 N3 arr |}.
+Next Obligation. symmetry.  apply (P1 M3 N3 (S_to_P M3 N3 S)). Qed.
+
+Program Definition prod_fun_to_JEM {C M N} M3 N3 (S : @JD_S C M N M3 N3) :
+  @Functor C (JEM (Monad_from_3 N3)) :=
+  {| fobj := prod_is_ex_alg M3 N3 S ; fmap := prod_alg_arr M3 N3 S |}.
+Next Obligation.  proper. apply (mapc_respects M3 N3). exact X. Qed.
+Next Obligation.  apply mapc_id. Qed.
+Next Obligation.  apply mapc_comp. Qed.
+
+(* analogy with join_to_alg doesn't seem to work
+(* given a T-algebra, there is a T-Algebra arrow from the prod algebra to it *)
+Program Definition prod_to_alg {C M N} M3 N3 (S : @JD_S C M N M3 N3) a
+  (alg : @TAlgebra C _ _ a) :
+  @TAlgebraHom C _ _ _ _ (prod_is_alg M3 N3 S a) alg :=
+  {| t_alg_hom := t_alg |}.
+Next Obligation. symmetry. apply t_action. Qed.
+
+(* now to show these functors are adjoint *)
+Program Definition prod_adj_EM {C M N} M3 N3 (S : @JD_S C M N M3 N3) :
+  Adjunction_IffEq (prod_fun_to_JEM M3 N3 S) (fun_from_JEM _) :=
+  {| unit' := @ret C M H ; ???
+    counit' := fun alg => prod_to_alg H (projT1 alg) (projT2 alg) |}.
+*)
+Print Implicit 
+Functor.
+
 (* given an N-algebra f, mapM f o swap is an N-algebra (assuming JD_S) *)
 Program Definition ms_alg {C M N} M3 N3 (S : @JD_S C M N M3 N3) a
   (alg : @TAlgebra C _ (Monad_from_3 N3) a) :
@@ -839,9 +943,9 @@ rewrite map3_comp.  rewrite <- !comp_assoc.  apply comp_o_l.
 simpl. rewrite <- pext_swap. unfold pext_P. simpl. 
 unfold prod_S. apply comp_assoc. Qed.
 
-(* TODO NEXT: there is a M-algebra morphisms corresponding to unitM and joinM,
-  then M is a monad in the category of N-algebras *)
+(* TODO M is a monad in the category of N-algebras *)
 
+(* TODO this one works assuming only JD_D (except that you need ms_alg) *)
 Program Definition N_alghom_unitM {C M N} [M3 N3] (S : @JD_S C M N M3 N3) [a]
   (alg : @TAlgebra C _ (Monad_from_3 N3) a) :
   @TAlgebraHom C _ (Monad_from_3 N3) a (M a) alg (ms_alg _ _ S a alg) :=
@@ -872,4 +976,3 @@ exact (@t_alg_hom_commutes _ _ _ _ _ alga algb fah). Qed.
 
 Print Implicit 
 TAlgebraHom.
-
