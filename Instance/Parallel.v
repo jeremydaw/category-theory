@@ -12,9 +12,9 @@ Generalizable All Variables.
 
   This is used to build diagrams that identify equalizers. *)
 
-Inductive ParObj : Type := ParX | ParY.
+Inductive ParObj : Set := ParX | ParY.
 
-Inductive ParHom : bool → ParObj → ParObj → Type :=
+Inductive ParHom : bool → ParObj → ParObj → Set :=
   | ParIdX : ParHom true ParX ParX
   | ParIdY : ParHom true ParY ParY
   | ParOne : ParHom true ParX ParY
@@ -61,6 +61,8 @@ Proof. inversion 1. Qed.
   end; auto.
 
 Set Transparent Obligations.
+
+Local Set Warnings "-intuition-auto-with-star".
 
 Program Definition Parallel : Category := {|
   obj     := ParObj;

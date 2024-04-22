@@ -4,9 +4,9 @@ Require Import Category.Theory.Functor.
 
 Generalizable All Variables.
 
-Inductive TwoDObj : Type := TwoDX | TwoDY.
+Inductive TwoDObj : Set := TwoDX | TwoDY.
 
-Inductive TwoDHom : TwoDObj → TwoDObj → Type :=
+Inductive TwoDHom : TwoDObj → TwoDObj → Set :=
   | TwoDIdX : TwoDHom TwoDX TwoDX
   | TwoDIdY : TwoDHom TwoDY TwoDY.
 
@@ -31,6 +31,8 @@ Lemma TwoDHom_Y_X_absurd : TwoDHom TwoDY TwoDX → False.
 Proof. inversion 1. Qed.
 
 #[export] Hint Extern 4 => contradiction TwoDHom_Y_X_absurd : two_laws.
+
+Local Set Warnings "-intuition-auto-with-star".
 
 (* The discrete category 2 has two objects and their identity morphisms. *)
 

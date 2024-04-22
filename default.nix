@@ -1,6 +1,6 @@
 args@{
-  rev    ? "eb569cf5cc4ff90eb78896c04ee1fd377acc7e1b"
-, sha256 ? "14iai62cvjyk7niq0jbfd1x0afk6rbz9y1cncldrx126p2cm6wa7"
+  rev    ? "90f456026d284c22b3e3497be980b2e47d0b28ac"
+, sha256 ? "164lsq7xjjvpga6l6lfi9wfsnshgfxnpa8lvb2imscdwgmajakrc"
 
 , pkgs   ? import (builtins.fetchTarball {
     url = "https://github.com/NixOS/nixpkgs/archive/${rev}.tar.gz";
@@ -34,7 +34,22 @@ equations = coqPackages:
     (if coqPackages == "coqPackages_8_16"
      then {
        rev = "v1.3-8.16";
-       sha256 = "sha256-MwMW7vXEM02DsBhs2LthscEbTK3qYaZhrThzyBOPjqI=";
+       sha256 = "sha256-zyMGeRObtSGWh7n3WCqesBZL5EgLvKwmnTy09rYpxyE=";
+     } else {}) //
+    (if coqPackages == "coqPackages_8_17"
+     then {
+       rev = "v1.3-8.17";
+       sha256 = "sha256-yNotSIxFkhTg3reZIchGQ7cV9WmTJ7p7hPfKGBiByDw=";
+     } else {}) //
+    (if coqPackages == "coqPackages_8_18"
+     then {
+       rev = "v1.3-8.18";
+       sha256 = "sha256-8MZO9vWdr8wlAov0lBTYMnde0RuMyhaiM99zp7Zwfao=";
+     } else {}) //
+    (if coqPackages == "coqPackages_8_19"
+     then {
+       rev = "v1.3-8.19";
+       sha256 = "sha256-roBCWfAHDww2Z2JbV5yMI3+EOfIsv3WvxEcUbBiZBsk=";
      } else {}));
 
     phases = [
@@ -42,7 +57,7 @@ equations = coqPackages:
     ];
 
     buildInputs = [
-      coq coq.ocaml coq.camlp5 coq.findlib
+      coq coq.ocaml coq.findlib
     ];
     enableParallelBuilding = true;
 
@@ -59,7 +74,8 @@ equations = coqPackages:
 
     env = pkgs.buildEnv { inherit name; paths = buildInputs; };
     passthru = {
-      compatibleCoqVersions = v: builtins.elem v [ "8.14" "8.15" "8.16" ];
+      compatibleCoqVersions = v:
+        builtins.elem v [ "8.14" "8.15" "8.16" "8.17" "8.18" "8.19" ];
     };
   };
 
@@ -73,8 +89,11 @@ category-theory = coqPackages:
           else ./.;
 
     buildInputs = [
-      coq coq.ocaml coq.camlp5 coq.findlib (equations coqPackages)
-    ] ++ pkgs.lib.optionals (coqPackages != "coqPackages_8_16") [
+      coq coq.ocaml coq.findlib (equations coqPackages)
+    ] ++ pkgs.lib.optionals (coqPackages != "coqPackages_8_16" &&
+                             coqPackages != "coqPackages_8_17" &&
+                             coqPackages != "coqPackages_8_18" &&
+                             coqPackages != "coqPackages_8_19") [
       dpdgraph
     ];
     enableParallelBuilding = true;
@@ -91,13 +110,18 @@ category-theory = coqPackages:
 
     env = pkgs.buildEnv { inherit name; paths = buildInputs; };
     passthru = {
-      compatibleCoqVersions = v: builtins.elem v [ "8.14" "8.15" "8.16" ];
+      compatibleCoqVersions = v:
+        builtins.elem v [ "8.14" "8.15" "8.16" "8.17" "8.18" "8.19" ];
     };
   };
 
-in {
+in rec {
   inherit category-theory;
   category-theory_8_14 = category-theory "coqPackages_8_14";
   category-theory_8_15 = category-theory "coqPackages_8_15";
   category-theory_8_16 = category-theory "coqPackages_8_16";
+  category-theory_8_17 = category-theory "coqPackages_8_17";
+  category-theory_8_18 = category-theory "coqPackages_8_18";
+  category-theory_8_19 = category-theory "coqPackages_8_19";
+  category-theory_cur  = category-theory_8_19;
 }

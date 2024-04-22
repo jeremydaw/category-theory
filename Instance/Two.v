@@ -4,9 +4,9 @@ Require Import Category.Theory.Functor.
 
 Generalizable All Variables.
 
-Inductive TwoObj : Type := TwoX | TwoY.
+Inductive TwoObj : Set := TwoX | TwoY.
 
-Inductive TwoHom : TwoObj → TwoObj → Type :=
+Inductive TwoHom : TwoObj → TwoObj → Set :=
   | TwoIdX : TwoHom TwoX TwoX
   | TwoIdY : TwoHom TwoY TwoY
   | TwoXY  : TwoHom TwoX TwoY.
@@ -27,6 +27,8 @@ Lemma TwoHom_Y_X_absurd : TwoHom TwoY TwoX → False.
 Proof. inversion 1. Qed.
 
 #[export] Hint Extern 4 => contradiction TwoHom_Y_X_absurd : two_laws.
+
+Local Set Warnings "-intuition-auto-with-star".
 
 (* The category 2 has two objects, their identity morphisms, and one morphism
    from the first object to the second (here denoted false and true). *)

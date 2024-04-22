@@ -41,11 +41,11 @@ Notation "x && y" := (if x then Reduce y else No) : partial_scope.
  * A term language for theorems involving FMaps
  *)
 
-Record environment := {
+Record environment : Set := {
   vars : positive → N
 }.
 
-Inductive term :=
+Inductive term : Set :=
   | Var   : positive → term
   | Value : N → term.
 
@@ -55,6 +55,8 @@ Definition term_beq (x y : term) : bool :=
   | Value x, Value y => (x =? y)%N
   | _, _ => false
   end.
+
+Local Set Warnings "-intuition-auto-with-star".
 
 Lemma term_beq_sound x y : term_beq x y = true → x = y.
 Proof.
@@ -118,7 +120,7 @@ Fixpoint map_expr_denote env (m : map_expr) : M.t N :=
                           (term_denote env  f) (map_expr_denote env m')
   end.
 
-Inductive formula :=
+Inductive formula : Set :=
   | Top    : formula
   | Bottom : formula
   | Maps   : term → term → term → map_expr → formula
